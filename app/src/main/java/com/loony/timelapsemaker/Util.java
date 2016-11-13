@@ -22,6 +22,18 @@ public class Util {
 //            textView.append(formated + "\n");
     }
 
+    public static void logEx(String tag, String str, Object... params) {
+        String formated = params.length == 0 ? str : String.format(str, params);
+
+        if(params.length == 0)
+            Log.d(tag, formated);
+        else
+            Log.d(tag, formated);
+
+//        if(textView != null)
+//            textView.append(formated + "\n");
+    }
+
     public static void logToast(Context context, String str, Object... params) {
         String formated = params.length == 0 ? str : String.format(str, params);
         Log.d("test", formated);
