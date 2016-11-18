@@ -1,6 +1,8 @@
 package com.loony.timelapsemaker;
 
 import android.content.Context;
+import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -30,7 +32,7 @@ import java.util.List;
  */
 
 public class MyCamera {
-    private static final int IMAGE_FORMAT = 256; // JPEG
+    private static final int IMAGE_FORMAT = ImageFormat.JPEG;//256; // JPEG
 
     private Context context;
 
@@ -40,6 +42,7 @@ public class MyCamera {
     private boolean cameraFound = false;
 
     private List<Surface> surfaces;
+    private SurfaceTexture dummyPreview = new SurfaceTexture(1);
     private int currentNumberPhoto;
 
     public MyCamera(Context context) {
@@ -132,16 +135,19 @@ public class MyCamera {
             Util.log("Size: %d/%d", size.getWidth(), size.getHeight());
         }
 
-        ImageReader reader = ImageReader.newInstance(sizes[0].getWidth(), sizes[0].getHeight(), IMAGE_FORMAT, 5);
+        ImageReader reader = ImageReader.newInstance(sizes[0].getWidth(), sizes[0].getHeight(), IMAGE_FORMAT, 2);
         reader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader reader) {
                 Util.log("createCaptureSession::ImageReader->OnImageAvailable --> saveImageToDisk");
-                Image img = reader.acquireNextImage();
+                Image img = reader.acquireLatestImage();
                 saveImageToDisk(img);
+                img.close();
             }
         }, null);
+
         Surface surface = reader.getSurface();
+//        Surface surface = new Surface(dummyPreview);
         if(surface == null) Util.log("Surface jest nullem!");
 
         surfaces.add(surface);
@@ -168,10 +174,13 @@ public class MyCamera {
     // #4
     private void capturePhoto(CameraCaptureSession session, final CameraDevice camera) {
         try {
-            CaptureRequest.Builder builder = camera.createCaptureRequest(CameraDevice.TEMPLATE_MANUAL);
+            CaptureRequest.Builder builder = camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
             builder.addTarget(surfaces.get(0));
-            builder.set(CaptureRequest.JPEG_GPS_LOCATION, null);
-            builder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+//            builder.set(CaptureRequest.JPEG_GPS_LOCATION, null);
+//            builder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+//            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON);
+//            builder.set(CaptureRequest.CONTROL_AF_MODE, CameraMetadata.CONTROL_AF_MODE_AUTO);
+            builder.set(CaptureRequest.JPEG_QUALITY, (byte) 90);
             CaptureRequest captureRequest = builder.build();
 
             Util.log("Robie foto!");
