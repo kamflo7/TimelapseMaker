@@ -16,6 +16,9 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.support.annotation.NonNull;
 import android.util.Size;
 import android.view.Surface;
@@ -86,10 +89,18 @@ public class MyCamera {
         }
     }
 
+    public interface OnPhotoCreatedListener {
+        void onCreated();
+    }
+
+    private OnPhotoCreatedListener listener;
+
     // #1
-    public void makeAPhoto(int number) {
+    public void makeAPhoto(int number, OnPhotoCreatedListener l) {
+        Util.log("makeAPhoto(%d) called", number);
         if(!cameraFound) return;
         currentNumberPhoto = number;
+        this.listener = l;
 
         try {
             setUpCameraOutputs();
@@ -141,11 +152,6 @@ public class MyCamera {
                         e.printStackTrace();
                     }
 
-//                    try {
-//                        Thread.sleep(2000);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
                     lockFocus();
                 }
 
@@ -289,6 +295,7 @@ public class MyCamera {
                     Util.log("captureStillPicture::onCaptureCompleted");
                     unlockFocus();
                     session.close();
+                    mCameraDevice.close();
                 }
             };
 
@@ -320,6 +327,10 @@ public class MyCamera {
             Util.log("onImageAvailable, height: " + image.getHeight());
             saveImageToDisk(image);
             image.close();
+            mImageReader.close();
+
+            if(listener != null)
+                listener.onCreated();
 //            reader.close();
         }
     };

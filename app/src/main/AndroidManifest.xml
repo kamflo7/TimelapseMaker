@@ -24,6 +24,11 @@
         <service
             android:name=".CameraService"
             />
+
+        <service
+            android:name=".test.CameraIntentService"
+            />
+
     </application>
 
 </manifest>

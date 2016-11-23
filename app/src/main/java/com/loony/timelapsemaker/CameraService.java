@@ -1,11 +1,15 @@
 package com.loony.timelapsemaker;
 
+import android.app.Notification;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
-import android.widget.Toast;
+import android.support.v4.app.NotificationCompat;
 
 /**
  * Created by Kamil on 11/13/2016.
@@ -14,34 +18,89 @@ import android.widget.Toast;
 public class CameraService extends Service {
 
     private final IBinder mBinder = new LocalBinder();
-
-    private int number = 10;
     private MyCamera camera;
+    private Worker worker;
 
     public void clickSth() {
-        camera.makeAPhoto(number++);
+    }
 
-//        MyCamera c = new MyCamera(getApplicationContext());
-//        c.makeAPhoto(number++);
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
+        Notification notification = new NotificationCompat.Builder(this)
+                .setSmallIcon(R.mipmap.unnamed)
+                .setContentTitle("My awesome TimelapseMaker!")
+                .setContentText("Pretending that sth it's doing")
+                .setContentIntent(pendingIntent).build();
+
+        startForeground(5, notification);
+        //Util.log("Runnable::run %s | %d", Thread.currentThread().getName(), Thread.currentThread().getId());
+
+        camera = new MyCamera(getApplicationContext());
     }
 
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         Util.log("CameraService::onBind()!");
-        camera = new MyCamera(getApplicationContext());
+
+        Runnable runnable = new Runnable() {
+
+            private int number = 11;
+            private int max = 21;
+
+            private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
+                @Override
+                public void onCreated() {
+                    if(number == max) {
+                        Util.log("Koniec sesji");
+                        return;
+                    }
+
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    camera.makeAPhoto(number++, listener);
+                }
+            };
+
+            @Override
+            public void run() {
+                camera.makeAPhoto(number, listener);
+            }
+        };
+
+        worker = new Worker("WorkerThread");
+        worker.start();
+        worker.waitUntilReady();
+        worker.handler.post(runnable);
+
         return mBinder;
     }
 
-    @Override
-    public boolean onUnbind(Intent intent) {
-        Util.log("CameraService::onUnbind()!");
-        return super.onUnbind(intent);
+    private class Worker extends HandlerThread {
+        public Handler handler;
+
+        public Worker(String name) {
+            super(name);
+        }
+
+        public synchronized void waitUntilReady() {
+            handler = new Handler(getLooper());
+        }
     }
+
 
     @Override
     public void onDestroy() {
         Util.log("CameraService::onDestroy()!");
+        worker.quitSafely();
         super.onDestroy();
     }
 
@@ -50,5 +109,4 @@ public class CameraService extends Service {
             return CameraService.this;
         }
     }
-
 }

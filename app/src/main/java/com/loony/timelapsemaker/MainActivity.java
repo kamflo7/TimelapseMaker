@@ -36,6 +36,10 @@ import android.os.Bundle;
 
 import android.view.Surface;
 import android.view.View;
+
+import com.loony.timelapsemaker.test.CameraIntentService;
+
+import java.io.File;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -61,13 +65,15 @@ public class MainActivity extends AppCompatActivity {
             makePermissions();
         else
             afterCheckPermission();
-
     }
 
     public void btnClick(View view) {
         if(mBound) {
             mService.clickSth();
         }
+
+//        Intent intent = new Intent(this, CameraIntentService.class);
+//        startService(intent);
     }
 
     private ServiceConnection mConnection = new ServiceConnection() {
@@ -88,6 +94,10 @@ public class MainActivity extends AppCompatActivity {
     private void afterCheckPermission() {
         Intent intent = new Intent(this, CameraService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+
+
+//        Intent intent = new Intent(this, CameraIntentService.class);
+//        startService(intent);
     }
 
     private boolean checkPermissions() {
