@@ -49,30 +49,31 @@ public class CameraService extends Service {
 
         Runnable runnable = new Runnable() {
 
-            private int number = 11;
-            private int max = 21;
+            private int number = 51;
+            private int amount = 240;
 
             private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
                 @Override
                 public void onCreated() {
-                    if(number == max) {
+                    if(number == amount) {
                         Util.log("Koniec sesji");
                         return;
                     }
 
                     try {
-                        Thread.sleep(200);
+                        Thread.sleep(15000);
                     } catch (InterruptedException e) {
-                        e.printStackTrace();
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
                     }
 
-                    camera.makeAPhoto(number++, listener);
+                    camera.makePhoto(number++, listener);
                 }
             };
 
             @Override
             public void run() {
-                camera.makeAPhoto(number, listener);
+                camera.makePhoto(number++, listener);
             }
         };
 

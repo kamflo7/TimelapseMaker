@@ -9,6 +9,7 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
+import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
 import android.hardware.camera2.TotalCaptureResult;
@@ -43,7 +44,6 @@ public class MyCamera {
     private CameraCharacteristics cameraCharacteristics;
     private boolean cameraFound = false;
 
-//    private List<Surface> surfaces;
     private int currentNumberPhoto;
     CaptureRequest.Builder mPreviewRequestBuilder;
     private CameraDevice mCameraDevice;
@@ -51,6 +51,7 @@ public class MyCamera {
     private Size largestSize;
     private CameraCaptureSession mCaptureSession;
     private CaptureRequest mPreviewRequest;
+    private StreamConfigurationMap map;
 
     private static final int STATE_PREVIEW = 0;
     private static final int STATE_WAITING_LOCK = 1;
@@ -76,7 +77,6 @@ public class MyCamera {
                 for(String camera : cameras) {
                     CameraCharacteristics characteristics = manager.getCameraCharacteristics(camera);
                     if(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) {
-//                        openCamera(manager, camera, characteristics);
                         cameraId = camera;
                         cameraCharacteristics = characteristics;
                         cameraFound = true;
@@ -87,6 +87,15 @@ public class MyCamera {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+
+        if(!cameraFound) {
+            throw new RuntimeException("MyCamera: Camera not found"); // better to throw custom exception like a CameraNotFoundException?
+        }
+
+        map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+        if(!checkForFormatExistence(IMAGE_FORMAT, map.getOutputFormats())) {
+            throw new RuntimeException("MyCamera: Format not found"); // jak wyżej
+        }
     }
 
     public interface OnPhotoCreatedListener {
@@ -96,8 +105,8 @@ public class MyCamera {
     private OnPhotoCreatedListener listener;
 
     // #1
-    public void makeAPhoto(int number, OnPhotoCreatedListener l) {
-        Util.log("makeAPhoto(%d) called", number);
+    public void makePhoto(int number, OnPhotoCreatedListener l) {
+        Util.log("makePhoto(%d) called", number);
         if(!cameraFound) return;
         currentNumberPhoto = number;
         this.listener = l;
@@ -106,33 +115,33 @@ public class MyCamera {
             setUpCameraOutputs();
             manager.openCamera(cameraId, mStateCallback, null);
         } catch(SecurityException e) {
+            throw new RuntimeException("MyCamera: " + e.getMessage());
         }
         catch(CameraAccessException e) {
+            throw new RuntimeException("MyCamera: " + e.getMessage());
         }
     }
 
     // #2
     private void setUpCameraOutputs() {
-        StreamConfigurationMap map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-        if(!checkForFormatExistence(IMAGE_FORMAT, map.getOutputFormats())) {
-            Util.log("Fatal error, no format");
-            return;
-        }
-
         largestSize = map.getOutputSizes(IMAGE_FORMAT)[0];
         mImageReader = ImageReader.newInstance(largestSize.getWidth(), largestSize.getHeight(), IMAGE_FORMAT, 2);
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
     }
 
+    private SurfaceTexture dummySurface;
+    private Surface previewSurface;
+
     // #4
     private void createCameraPreviewSession() {
-        SurfaceTexture dummySurface = new SurfaceTexture(10);
+        dummySurface = new SurfaceTexture(10);
         dummySurface.setDefaultBufferSize(largestSize.getWidth(), largestSize.getHeight());
-        Surface previewSurface = new Surface(dummySurface);
+        previewSurface = new Surface(dummySurface);
 
         try {
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(previewSurface);
+            setCameraOrientation(mPreviewRequestBuilder);
 
             mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
@@ -146,6 +155,7 @@ public class MyCamera {
 
                     mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                     mPreviewRequest = mPreviewRequestBuilder.build();
+                    Util.log("CreateCameraPreviewSession[Request: %s]", mPreviewRequest.toString());
                     try {
                         mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, null);
                     } catch (CameraAccessException e) {
@@ -169,10 +179,8 @@ public class MyCamera {
     private void lockFocus() {
         Util.log("lockFocus called");
         try {
-            // This is how to tell the camera to lock focus.
-            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
-            // Tell #mCaptureCallback to wait for the lock.
-            mState = STATE_WAITING_LOCK;
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START); // This is how to tell the camera to lock focus.
+            mState = STATE_WAITING_LOCK; // Tell #mCaptureCallback to wait for the lock.
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -182,14 +190,9 @@ public class MyCamera {
     private void unlockFocus() {
         Util.log("unlockFocus() called");
         try {
-            // Reset the auto-focus trigger
-//            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
-//            mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, mBackgroundHandler);
-            // After this, the camera will go back to the normal state of preview.
             mState = STATE_PREVIEW;
-//            mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, mBackgroundHandler);
             mCaptureSession.abortCaptures();
-
+//            mCaptureSession.close();
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
@@ -224,7 +227,7 @@ public class MyCamera {
                     break;
                 }
                 case STATE_WAITING_LOCK: {
-                    Util.log("STATE_WAITING_LOCK");
+//                    Util.log("STATE_WAITING_LOCK");
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     if (afState == null) {
                         Util.log("afState is null");
@@ -275,6 +278,13 @@ public class MyCamera {
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
             process(result);
         }
+
+        @Override
+        public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+            Util.log("Capture failed in MyCamera[Request: %s][Failure: Frame %d; Reason: %d; SequenceID: %d; wasImgCaptured: %d]", request.toString(),
+                    failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
+            super.onCaptureFailed(session, request, failure);
+        }
     };
 
     private void captureStillPicture() {
@@ -285,6 +295,7 @@ public class MyCamera {
             Surface surfaceTarget = mImageReader.getSurface();
             captureBuilder.addTarget(surfaceTarget);
             captureBuilder.set(CaptureRequest.JPEG_QUALITY, (byte) 90);
+            setCameraOrientation(captureBuilder);
 
             // Use the same AE and AF modes as the preview.
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
@@ -297,10 +308,18 @@ public class MyCamera {
                     session.close();
                     mCameraDevice.close();
                 }
+
+                @Override
+                public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+                    Util.log("Capture failed FINAL in MyCamera[Request: %s][Failure: Frame %d; Reason: %d; SequenceID: %d; wasImgCaptured: %d]", request.toString(),
+                            failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
+                    super.onCaptureFailed(session, request, failure);
+                }
             };
 
             mCaptureSession.stopRepeating();
-            mCaptureSession.abortCaptures();// delete
+//            mCaptureSession.close();
+            mCaptureSession.abortCaptures();
             Util.log("Now will be capturing final image");
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
@@ -310,10 +329,8 @@ public class MyCamera {
 
     private void runPrecaptureSequence() {
         try {
-            // This is how to tell the camera to trigger.
-            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START);
-            // Tell #mCaptureCallback to wait for the precapture sequence to be set.
-            mState = STATE_WAITING_PRECAPTURE;
+            mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START); // This is how to tell the camera to trigger.
+            mState = STATE_WAITING_PRECAPTURE; // Tell #mCaptureCallback to wait for the precapture sequence to be set.
             mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -327,13 +344,24 @@ public class MyCamera {
             Util.log("onImageAvailable, height: " + image.getHeight());
             saveImageToDisk(image);
             image.close();
+            reader.setOnImageAvailableListener(null, null);
+            reader.close();
             mImageReader.close();
+            mImageReader = null;
+
+            dummySurface.release();
+            previewSurface.release();
+            dummySurface = null;
+            previewSurface = null;
 
             if(listener != null)
                 listener.onCreated();
-//            reader.close();
         }
     };
+
+    private void setCameraOrientation(CaptureRequest.Builder builder) {
+        builder.set(CaptureRequest.JPEG_ORIENTATION, cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION));
+    }
 
     private boolean checkForFormatExistence(int targetFormat, @NonNull int[] formats) {
         for(int format : formats) {

@@ -26,7 +26,7 @@ public class CameraHandlerThread extends HandlerThread {
         camera = new MyCamera(context);
 
         for(int i=0; i<5; i++) {
-            camera.makeAPhoto(number++, null);
+            camera.makePhoto(number++, null);
             try {
                 Thread.sleep(5000);
             } catch (InterruptedException e) {
