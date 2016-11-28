@@ -37,8 +37,6 @@ public class CameraService extends Service {
                 .setContentIntent(pendingIntent).build();
 
         startForeground(5, notification);
-        //Util.log("Runnable::run %s | %d", Thread.currentThread().getName(), Thread.currentThread().getId());
-
         camera = new MyCamera(getApplicationContext());
     }
 
@@ -49,8 +47,8 @@ public class CameraService extends Service {
 
         Runnable runnable = new Runnable() {
 
-            private int number = 51;
-            private int amount = 240;
+            private int number = 0;
+            private int amount = 20;
 
             private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
                 @Override
@@ -61,7 +59,7 @@ public class CameraService extends Service {
                     }
 
                     try {
-                        Thread.sleep(15000);
+                        Thread.sleep(2000);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new RuntimeException(e);

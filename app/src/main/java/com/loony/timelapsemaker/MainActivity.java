@@ -90,8 +90,18 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
+//    private MyCamera myCamera;
     // #0
     private void afterCheckPermission() {
+//        myCamera = new MyCamera(getApplicationContext());
+//        myCamera.makePhoto(0, new MyCamera.OnPhotoCreatedListener() {
+//            @Override
+//            public void onCreated() {
+//
+//            }
+//        });
+//        myCamera = null;
         Intent intent = new Intent(this, CameraService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
 

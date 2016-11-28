@@ -36,6 +36,7 @@ import java.util.Arrays;
 
 public class MyCamera {
     private static final int IMAGE_FORMAT = ImageFormat.JPEG;//256; // JPEG
+//    private static final int IMAGE_FORMAT = ImageFormat.FLEX_RGB_888;
 
     private Context context;
 
@@ -96,6 +97,19 @@ public class MyCamera {
         if(!checkForFormatExistence(IMAGE_FORMAT, map.getOutputFormats())) {
             throw new RuntimeException("MyCamera: Format not found"); // jak wyżej
         }
+
+//        showAvailableFormatsAndSizes();
+    }
+
+    private void showAvailableFormatsAndSizes() {
+        int[] formats = map.getOutputFormats();
+        Size[] sizes = map.getOutputSizes(IMAGE_FORMAT);
+
+        for(int format : formats)
+            Util.log("Available outputFormat: %d", format);
+
+        for(Size size : sizes)
+            Util.log("Available size for JPEG: %dx%d", size.getWidth(), size.getHeight());
     }
 
     public interface OnPhotoCreatedListener {
@@ -131,6 +145,7 @@ public class MyCamera {
 
     private SurfaceTexture dummySurface;
     private Surface previewSurface;
+    private boolean startedRepeatedRequest;
 
     // #4
     private void createCameraPreviewSession() {
@@ -157,12 +172,11 @@ public class MyCamera {
                     mPreviewRequest = mPreviewRequestBuilder.build();
                     Util.log("CreateCameraPreviewSession[Request: %s]", mPreviewRequest.toString());
                     try {
+                        startedRepeatedRequest = false;
                         mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, null);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
                     }
-
-                    lockFocus();
                 }
 
                 @Override
@@ -187,17 +201,8 @@ public class MyCamera {
         }
     }
 
-    private void unlockFocus() {
-        Util.log("unlockFocus() called");
-        try {
-            mState = STATE_PREVIEW;
-            mCaptureSession.abortCaptures();
-//            mCaptureSession.close();
-        } catch (CameraAccessException e) {
-            e.printStackTrace();
-        }
-    }
-
+    private int countStateWaitingLock;
+    private int countStatePreview;
     // #3
     private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -216,18 +221,26 @@ public class MyCamera {
         public void onError(CameraDevice camera, int error) {
             camera.close();
             mCameraDevice = null;
+            Util.log("Camera mStateCallback error: " + error);
         }
     };
 
     private CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
+            if(!startedRepeatedRequest) {
+                lockFocus();
+                startedRepeatedRequest = true;
+                countStateWaitingLock = 0;
+                countStatePreview = 0;
+            }
+
             switch(mState) {
                 case STATE_PREVIEW: {
-                    Util.log("STATE_PREVIEW");
+                    countStatePreview++;
                     break;
                 }
                 case STATE_WAITING_LOCK: {
-//                    Util.log("STATE_WAITING_LOCK");
+                    countStateWaitingLock++;
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     if (afState == null) {
                         Util.log("afState is null");
@@ -247,8 +260,7 @@ public class MyCamera {
                 }
                 case STATE_WAITING_PRECAPTURE: {
                     Util.log("STATE_WAITING_PRECAPTURE");
-                    // CONTROL_AE_STATE can be null on some devices
-                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE); // CONTROL_AE_STATE can be null on some devices
                     if (aeState == null ||
                             aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
                             aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
@@ -258,8 +270,7 @@ public class MyCamera {
                 }
                 case STATE_WAITING_NON_PRECAPTURE: {
                     Util.log("STATE_WAITING_NON_PRECAPTURE");
-                    // CONTROL_AE_STATE can be null on some devices
-                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE);
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE); // CONTROL_AE_STATE can be null on some devices
                     if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
                         mState = STATE_PICTURE_TAKEN;
                         captureStillPicture();
@@ -285,6 +296,11 @@ public class MyCamera {
                     failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
             super.onCaptureFailed(session, request, failure);
         }
+
+        @Override
+        public void onCaptureStarted(CameraCaptureSession session, CaptureRequest request, long timestamp, long frameNumber) {
+            super.onCaptureStarted(session, request, timestamp, frameNumber);
+        }
     };
 
     private void captureStillPicture() {
@@ -297,14 +313,13 @@ public class MyCamera {
             captureBuilder.set(CaptureRequest.JPEG_QUALITY, (byte) 90);
             setCameraOrientation(captureBuilder);
 
-            // Use the same AE and AF modes as the preview.
-            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
+            captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);// Use the same AE and AF modes as the preview.
 
             CameraCaptureSession.CaptureCallback CaptureCallback = new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
                     Util.log("captureStillPicture::onCaptureCompleted");
-                    unlockFocus();
+                    mState = STATE_PREVIEW;
                     session.close();
                     mCameraDevice.close();
                 }
@@ -318,8 +333,7 @@ public class MyCamera {
             };
 
             mCaptureSession.stopRepeating();
-//            mCaptureSession.close();
-            mCaptureSession.abortCaptures();
+            Util.log("Count statePreview %d; stateWaitingLock: %d", countStatePreview, countStateWaitingLock);
             Util.log("Now will be capturing final image");
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
