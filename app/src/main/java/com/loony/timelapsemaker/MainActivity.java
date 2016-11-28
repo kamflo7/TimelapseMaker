@@ -1,9 +1,11 @@
 package com.loony.timelapsemaker;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 //import android.hardware.camera2.CameraAccessException;
@@ -30,12 +32,14 @@ import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 import android.view.Surface;
 import android.view.View;
+import android.widget.TextView;
 
 import com.loony.timelapsemaker.test.CameraIntentService;
 
@@ -44,22 +48,29 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    public static String BROADCAST_FILTER = "com.loony.timelapsemaker.nyancat";
+    public static String BROADCAST_MSG = "message";
+    public static String BROADCAST_MSG_CAPTURED_PHOTO = "capturedPhoto";
+    public static String BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
+
+    private static final int REQUEST_PERMISSIONS = 0x1;
+
     private String[] permissionsNedded = {
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
     };
 
-    private static final int REQUEST_PERMISSIONS = 0x1;
-    private List<Surface> surfaces;
-
     CameraService mService;
     boolean mBound = false;
+
+    private TextView textViewHello;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        textViewHello = (TextView) findViewById(R.id.textView);
 
         if(!checkPermissions())
             makePermissions();
@@ -71,9 +82,6 @@ public class MainActivity extends AppCompatActivity {
         if(mBound) {
             mService.clickSth();
         }
-
-//        Intent intent = new Intent(this, CameraIntentService.class);
-//        startService(intent);
     }
 
     private ServiceConnection mConnection = new ServiceConnection() {
@@ -90,28 +98,25 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
-//    private MyCamera myCamera;
-    // #0
     private void afterCheckPermission() {
-//        myCamera = new MyCamera(getApplicationContext());
-//        myCamera.makePhoto(0, new MyCamera.OnPhotoCreatedListener() {
-//            @Override
-//            public void onCreated() {
-//
-//            }
-//        });
-//        myCamera = null;
         Intent intent = new Intent(this, CameraService.class);
         bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-
-
-//        Intent intent = new Intent(this, CameraIntentService.class);
-//        startService(intent);
     }
 
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String msg = intent.getStringExtra(BROADCAST_MSG);
+            if(msg != null) {
+//                Util.log("[MainActivity::onReceive] msg=%s", msg);
+                if(msg.equals(BROADCAST_MSG_CAPTURED_PHOTO))
+                    textViewHello.setText("Currently captured " + intent.getIntExtra(BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1) + " photos");
+            }
+        }
+    };
+
     private boolean checkPermissions() {
-        Util.log("MainActivity::checkPermissions()");
+//        Util.log("MainActivity::checkPermissions()");
         for(String permission : permissionsNedded) {
             int permissionCheckResult = ContextCompat.checkSelfPermission(this, permission);
             Util.log("Permission check for camera: " + (permissionCheckResult == PermissionChecker.PERMISSION_DENIED ? "DENIED" : "GRANTED"));
@@ -128,13 +133,25 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        Util.log("MainActivity::onRequestPermissionsResult()");
+//        Util.log("MainActivity::onRequestPermissionsResult()");
         if(requestCode == REQUEST_PERMISSIONS) {
             if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Util.log("You've got permission!");
                 afterCheckPermission();
             }
         }
+    }
+
+    @Override
+    protected void onResume() {
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(BROADCAST_FILTER));
+        super.onResume();
+    }
+
+    @Override
+    protected void onPause() {
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
+        super.onPause();
     }
 
     @Override
