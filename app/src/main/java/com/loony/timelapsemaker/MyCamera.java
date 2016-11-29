@@ -68,6 +68,23 @@ public class MyCamera {
         init();
     }
 
+    public void tryForceStop() {
+        try {
+            if(mCaptureSession != null) {
+                mCaptureSession.abortCaptures();
+                mCaptureSession.close();
+            }
+
+            if(mCameraDevice != null)
+                mCameraDevice.close();
+
+            if(mImageReader != null)
+                mImageReader.close();
+        } catch (CameraAccessException e) {
+            Util.log("TryForceStop CameraAccessException " + e.getMessage());
+        }
+    }
+
     private void init() {
         manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 
@@ -138,7 +155,7 @@ public class MyCamera {
 
     // #2
     private void setUpCameraOutputs() {
-        largestSize = map.getOutputSizes(IMAGE_FORMAT)[0];
+        largestSize = map.getOutputSizes(IMAGE_FORMAT)[1];
         mImageReader = ImageReader.newInstance(largestSize.getWidth(), largestSize.getHeight(), IMAGE_FORMAT, 2);
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
     }
@@ -374,7 +391,8 @@ public class MyCamera {
     };
 
     private void setCameraOrientation(CaptureRequest.Builder builder) {
-        builder.set(CaptureRequest.JPEG_ORIENTATION, cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION));
+        builder.set(CaptureRequest.JPEG_ORIENTATION, 0);
+        Util.log("SensorOrientation: " + cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION));
     }
 
     private boolean checkForFormatExistence(int targetFormat, @NonNull int[] formats) {

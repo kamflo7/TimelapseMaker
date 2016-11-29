@@ -37,21 +37,18 @@ import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
-import android.view.Surface;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.KeyEvent;
 import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import com.loony.timelapsemaker.test.CameraIntentService;
-
-import java.io.File;
-import java.util.List;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
-
-    public static String BROADCAST_FILTER = "com.loony.timelapsemaker.nyancat";
-    public static String BROADCAST_MSG = "message";
-    public static String BROADCAST_MSG_CAPTURED_PHOTO = "capturedPhoto";
-    public static String BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
 
     private static final int REQUEST_PERMISSIONS = 0x1;
 
@@ -60,63 +57,90 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE
     };
+    private boolean permissionsGranted;
 
-    CameraService mService;
-    boolean mBound = false;
-
-    private TextView textViewHello;
+    private EditText editTextFps, editTextOutputTime, editTextInputTime, editTextFileNaming;
+    private TextView textViewResult;
+    private TimelapseSessionConfig timelapseSessionConfig = new TimelapseSessionConfig();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        textViewHello = (TextView) findViewById(R.id.textView);
+        initUI();
 
         if(!checkPermissions())
             makePermissions();
-        else
-            afterCheckPermission();
+//        else
+//            afterCheckPermission();
     }
 
-    public void btnClick(View view) {
-        if(mBound) {
-            mService.clickSth();
-        }
-    }
+    private void initUI() {
+        TextWatcher listener = new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
 
-    private ServiceConnection mConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName name, IBinder service) {
-            CameraService.LocalBinder binder = (CameraService.LocalBinder) service;
-            mService = binder.getService();
-            mBound = true;
-        }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { }
 
-        @Override
-        public void onServiceDisconnected(ComponentName name) {
-            mBound = false;
-        }
-    };
-
-    private void afterCheckPermission() {
-        Intent intent = new Intent(this, CameraService.class);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-    }
-
-    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String msg = intent.getStringExtra(BROADCAST_MSG);
-            if(msg != null) {
-//                Util.log("[MainActivity::onReceive] msg=%s", msg);
-                if(msg.equals(BROADCAST_MSG_CAPTURED_PHOTO))
-                    textViewHello.setText("Currently captured " + intent.getIntExtra(BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1) + " photos");
+            @Override
+            public void afterTextChanged(Editable s) {
+                updateTimelapseSessionConfigModel();
+                updateViewSessionParameters();
             }
+        };
+
+        editTextFps = (EditText) findViewById(R.id.editTextFps);
+        editTextOutputTime = (EditText) findViewById(R.id.editTextOutputTime);
+        editTextInputTime = (EditText) findViewById(R.id.editTextInputTime);
+        editTextFileNaming = (EditText) findViewById(R.id.editTextFileNaming);
+        textViewResult = (TextView) findViewById(R.id.textViewResult);
+        findViewById(R.id.btnStartCapture).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(!permissionsGranted) {
+                    Toast.makeText(MainActivity.this, "You need to provide necessary permissions!", Toast.LENGTH_LONG).show();
+                    makePermissions();
+                } else {
+                    Intent i = new Intent(MainActivity.this, CapturingActivity.class);
+                    i.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+                    startActivity(i);
+                }
+            }
+        });
+
+        editTextFps.addTextChangedListener(listener);
+        editTextOutputTime.addTextChangedListener(listener);
+        editTextInputTime.addTextChangedListener(listener);
+        editTextFileNaming.addTextChangedListener(listener);
+
+        updateTimelapseSessionConfigModel();
+        updateViewSessionParameters();
+    }
+
+    private void updateTimelapseSessionConfigModel() {
+        try {
+            timelapseSessionConfig.fps = Integer.parseInt(editTextFps.getText().toString());
+            timelapseSessionConfig.inputMinutes = Integer.parseInt(editTextInputTime.getText().toString());
+            timelapseSessionConfig.outputSeconds = Integer.parseInt(editTextOutputTime.getText().toString());
+            timelapseSessionConfig.photoStartIdx = Integer.parseInt(editTextFileNaming.getText().toString());
         }
-    };
+        catch (NumberFormatException e) {
+            Toast.makeText(this, "Number format exception! :<", Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void updateViewSessionParameters() {
+        textViewResult.setText(String.format("It will take %d frames and photo will be capturing every %.1f second",
+                timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.calculateCaptureFrequency()));
+    }
+
+//    private void afterCheckPermission() {
+//        Intent intent = new Intent(this, CameraService.class);
+//        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+//    }
 
     private boolean checkPermissions() {
-//        Util.log("MainActivity::checkPermissions()");
         for(String permission : permissionsNedded) {
             int permissionCheckResult = ContextCompat.checkSelfPermission(this, permission);
             Util.log("Permission check for camera: " + (permissionCheckResult == PermissionChecker.PERMISSION_DENIED ? "DENIED" : "GRANTED"));
@@ -124,6 +148,7 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         }
+        permissionsGranted = true;
         return true;
     }
 
@@ -133,25 +158,17 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-//        Util.log("MainActivity::onRequestPermissionsResult()");
         if(requestCode == REQUEST_PERMISSIONS) {
-            if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Util.log("You've got permission!");
-                afterCheckPermission();
+            if(grantResults.length > 0) {
+                permissionsGranted = true;
+                for(int grantResult : grantResults)
+                    if(grantResult != PackageManager.PERMISSION_GRANTED)
+                        permissionsGranted = false;
+
+                Util.log("You've got permissions!");
+//                afterCheckPermission();
             }
         }
-    }
-
-    @Override
-    protected void onResume() {
-        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(BROADCAST_FILTER));
-        super.onResume();
-    }
-
-    @Override
-    protected void onPause() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver);
-        super.onPause();
     }
 
     @Override
@@ -163,10 +180,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        Util.log("Activity::onDestroy");
-        if(mBound)
-            unbindService(mConnection);
-
         super.onDestroy();
     }
 }
