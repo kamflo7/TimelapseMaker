@@ -62,26 +62,22 @@ public class MyCamera {
 
     private int mState = STATE_PREVIEW;
 
+    private SurfaceTexture dummySurface;
+    private Surface previewSurface;
+    private boolean startedRepeatedRequest;
+
+    private int countStateWaitingLock;
+    private int countStatePreview;
+
     public MyCamera(Context context) {
         this.context = context;
 
         init();
     }
 
-    public void tryForceStop() {
-        try {
-            if(mCaptureSession != null) {
-                mCaptureSession.abortCaptures();
-                mCaptureSession.close();
-            }
-
-            if(mCameraDevice != null)
-                mCameraDevice.close();
-
-            if(mImageReader != null)
-                mImageReader.close();
-        } catch (CameraAccessException e) {
-            Util.log("TryForceStop CameraAccessException " + e.getMessage());
+    public void forceStopCameraDevice() {
+        if(mCameraDevice != null) {
+            mCameraDevice.close();
         }
     }
 
@@ -160,10 +156,6 @@ public class MyCamera {
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
     }
 
-    private SurfaceTexture dummySurface;
-    private Surface previewSurface;
-    private boolean startedRepeatedRequest;
-
     // #4
     private void createCameraPreviewSession() {
         dummySurface = new SurfaceTexture(10);
@@ -218,8 +210,6 @@ public class MyCamera {
         }
     }
 
-    private int countStateWaitingLock;
-    private int countStatePreview;
     // #3
     private CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
         @Override
@@ -375,7 +365,7 @@ public class MyCamera {
             Util.log("onImageAvailable, height: " + image.getHeight());
             saveImageToDisk(image);
             image.close();
-            reader.setOnImageAvailableListener(null, null);
+//            reader.setOnImageAvailableListener(null, null);
             reader.close();
             mImageReader.close();
             mImageReader = null;

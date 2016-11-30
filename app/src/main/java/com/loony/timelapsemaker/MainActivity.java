@@ -135,11 +135,6 @@ public class MainActivity extends AppCompatActivity {
                 timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.calculateCaptureFrequency()));
     }
 
-//    private void afterCheckPermission() {
-//        Intent intent = new Intent(this, CameraService.class);
-//        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-//    }
-
     private boolean checkPermissions() {
         for(String permission : permissionsNedded) {
             int permissionCheckResult = ContextCompat.checkSelfPermission(this, permission);
@@ -166,7 +161,6 @@ public class MainActivity extends AppCompatActivity {
                         permissionsGranted = false;
 
                 Util.log("You've got permissions!");
-//                afterCheckPermission();
             }
         }
     }

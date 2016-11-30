@@ -55,7 +55,7 @@ public class CameraService extends Service {
         }
 
         Notification notification = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.mipmap.unnamed)
+                .setSmallIcon(R.mipmap.my_icon)
                 .setContentTitle("TimelapseMaker")
                 .setContentText(text)
                 .setContentIntent(pendingIntent).build();
@@ -69,19 +69,13 @@ public class CameraService extends Service {
         notificationManager.notify(NOTIFICATION_ID, notification);
     }
 
-//    public void forceStop() {
-//        Util.log("ForceStop()");
-//        this.stopForeground(true);
-//        this.stopSelf();
-//    }
-
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
         startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1));
         timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
         calculatedFrequencySleep = (int) (timelapseSessionConfig.calculateCaptureFrequency() * 1000);
-        Util.log("CameraService::onBind[StartIdx: %d; AmountFrames: %d; FPS: %d; Frequency(s): %.1f; InputMinutes: %d; OutputSeconds: %d]", timelapseSessionConfig.photoStartIdx, timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.fps, timelapseSessionConfig.calculateCaptureFrequency(), timelapseSessionConfig.inputMinutes, timelapseSessionConfig.outputSeconds);
+//        Util.log("CameraService::onBind[StartIdx: %d; AmountFrames: %d; FPS: %d; Frequency(s): %.1f; InputMinutes: %d; OutputSeconds: %d]", timelapseSessionConfig.photoStartIdx, timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.fps, timelapseSessionConfig.calculateCaptureFrequency(), timelapseSessionConfig.inputMinutes, timelapseSessionConfig.outputSeconds);
 
         Runnable runnable = new Runnable() {
             private int number;
@@ -125,42 +119,6 @@ public class CameraService extends Service {
             }
         };
 
-//        Runnable runnable = new Runnable() {
-//            private int number=0;
-//            private int amount = 3;
-//
-//            private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
-//                @Override
-//                public void onCreated() {
-//                    Intent i = getSendingMessageIntent(Util.BROADCAST_MSG_CAPTURED_PHOTO);
-//                    i.putExtra(Util.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, number);
-//                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
-//                    updateNotificationMadePhotos(number);
-//                    nextPhotoIdx = number;
-//
-//                    if(number == amount) {
-//                        Util.log("Koniec sesji");
-//                        return;
-//                    }
-//
-//                    try {
-//                        Thread.sleep(2000);
-//                    } catch (InterruptedException e) {
-//                        Thread.currentThread().interrupt();
-//                        throw new RuntimeException(e);
-//                    }
-//
-//                    camera.makePhoto(number++, listener);
-//                }
-//            };
-//
-//            @Override
-//            public void run() {
-//                workerStarted = true;
-//                camera.makePhoto(number++, listener);
-//            }
-//        };
-
         worker = new Worker("WorkerThread");
         worker.start();
         worker.waitUntilReady();
@@ -190,9 +148,9 @@ public class CameraService extends Service {
     @Override
     public void onDestroy() {
         Util.log("CameraService::onDestroy()!");
-//        camera.tryForceStop();
         stopForeground(true);
         worker.quit();
+        camera.forceStopCameraDevice();
         super.onDestroy();
     }
 

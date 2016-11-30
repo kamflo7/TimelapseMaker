@@ -56,13 +56,17 @@ public class CapturingActivity extends AppCompatActivity {
     }
 
     private void updateTextInfo(int currentCaptured) {
-        textViewInfo.setText(String.format("Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated remaining time: %d minutes",
-                currentCaptured, timelapseSessionConfig.calculateFramesAmount(), frequency, calcRemainingTimeAsMinutes()));
+        int seconds = calcRemainingTimeAsSeconds();
+        int minutes = seconds / 60;
+        seconds -= minutes * 60;
+
+        textViewInfo.setText(String.format("Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated remaining time: %d minutes %02d seconds",
+                currentCaptured, timelapseSessionConfig.calculateFramesAmount(), frequency, minutes, seconds));
     }
 
-    private int calcRemainingTimeAsMinutes() {
+    private int calcRemainingTimeAsSeconds() {
         int difference = timelapseSessionConfig.calculateFramesAmount() - lastCapturedAmount;
-        return (int) Math.ceil(difference * frequency / 60);
+        return (int) Math.ceil(difference * frequency);
     }
 
     private void updateProgressBar(int currentCaptured) {
