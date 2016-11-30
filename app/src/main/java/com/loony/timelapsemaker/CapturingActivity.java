@@ -18,6 +18,7 @@ import android.widget.TextView;
 public class CapturingActivity extends AppCompatActivity {
 
     CameraService mCameraService;
+
     boolean mCameraServiceBound = false;
 
     private TextView textViewInfo;
@@ -33,13 +34,23 @@ public class CapturingActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_capturing);
         initUI();
+        Util.log("CapturingActivity:onCreate()");
 
         timelapseSessionConfig = getIntent().getExtras().getParcelable("timelapseSessionConfigParcel");
         progressBar.setMax(timelapseSessionConfig.calculateFramesAmount());
         frequency = timelapseSessionConfig.calculateCaptureFrequency();
         updateTextInfo(0);
 
-        createCameraService();
+//        if(!mCameraServiceBound)
+//            createCameraService();
+
+        if(Util.isMyServiceRunning(this, CameraService.class)) {
+            Util.log("CapturingActivity:: ok, service is running, no need to create");
+        } else {    // start camera service
+            Intent intent = new Intent(this, CameraService.class);
+            intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+            startService(intent);
+        }
     }
 
     private void initUI() {
@@ -50,6 +61,7 @@ public class CapturingActivity extends AppCompatActivity {
         dismiss.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                stopService(new Intent(CapturingActivity.this, CameraService.class));
                 finish();
             }
         });
@@ -74,9 +86,9 @@ public class CapturingActivity extends AppCompatActivity {
     }
 
     private void createCameraService() {
-        Intent intent = new Intent(this, CameraService.class);
-        intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
-        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
+//        Intent intent = new Intent(this, CameraService.class);
+//        intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+//        bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
     }
 
     private ServiceConnection mConnection = new ServiceConnection() {
@@ -122,8 +134,9 @@ public class CapturingActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if(mCameraServiceBound)
-            unbindService(mConnection);
+        Util.log("CapturingActivity::onDestroy");
+//        if(mCameraServiceBound)
+//            unbindService(mConnection);
         super.onDestroy();
     }
 }

@@ -46,6 +46,9 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.loony.timelapsemaker.http_server.MyServerExample;
+
+import java.io.IOException;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
@@ -55,13 +58,20 @@ public class MainActivity extends AppCompatActivity {
     private String[] permissionsNedded = {
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
-            Manifest.permission.READ_EXTERNAL_STORAGE
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.WAKE_LOCK
     };
     private boolean permissionsGranted;
 
     private EditText editTextFps, editTextOutputTime, editTextInputTime, editTextFileNaming;
     private TextView textViewResult;
     private TimelapseSessionConfig timelapseSessionConfig = new TimelapseSessionConfig();
+
+
+    // HttpService
+    private MyServerExample server; //httpd
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -162,6 +172,24 @@ public class MainActivity extends AppCompatActivity {
 
                 Util.log("You've got permissions!");
             }
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+//        try {
+//            server = new MyServerExample(); //httpd
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        if(server != null) {
+            server.stop(); //httpd
         }
     }
 

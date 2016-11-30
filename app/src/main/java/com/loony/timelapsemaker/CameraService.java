@@ -10,6 +10,7 @@ import android.os.Binder;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.LocalBroadcastManager;
@@ -30,14 +31,77 @@ public class CameraService extends Service {
     private TimelapseSessionConfig timelapseSessionConfig;
     private int calculatedFrequencySleep;
 
-    private boolean workerStarted = false;
-    private int nextPhotoIdx;
+    private PowerManager powerManager; // todo usunac to potem; a nawet nie, bo trzeba wakeLocka zainstancjonowac :D
+    private PowerManager.WakeLock wakeLock;
 
     @Override
     public void onCreate() {
         super.onCreate();
-
+        Util.log("CameraService::onCreate");
         camera = new MyCamera(getApplicationContext());
+
+        powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1));
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
+        calculatedFrequencySleep = (int) (timelapseSessionConfig.calculateCaptureFrequency() * 1000);
+        Util.log("CameraService::onStartCommand [freq(sec): %d]", calculatedFrequencySleep);
+
+        Runnable runnable = new Runnable() {
+            private int number;
+            private int amount = timelapseSessionConfig.calculateFramesAmount();
+//            private long time;
+
+            private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
+                @Override
+                public void onCreated() {
+//                    time = System.currentTimeMillis();
+                    Intent i = getSendingMessageIntent(Util.BROADCAST_MSG_CAPTURED_PHOTO);
+                    i.putExtra(Util.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, number);
+                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+                    updateNotificationMadePhotos(number);
+
+                    if(number == amount) {
+                        Util.log("Koniec sesji");
+                        if(wakeLock.isHeld())
+                            wakeLock.release();
+                        CameraService.this.stopSelf();
+                        return;
+                    }
+
+                    try {
+                        Thread.sleep(calculatedFrequencySleep);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+
+//                    Util.logEx("testTime", "Time between saved photo and call to make new photo: %d ms [Should be %d][ScreenOn: %s]",
+//                            System.currentTimeMillis()-time, calculatedFrequencySleep,
+//                            powerManager.isInteractive() ? "Yep" : "Nope");
+                    camera.makePhoto(number++, listener);
+                }
+            };
+
+            @Override
+            public void run() {
+                wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "myWakeLockTag");
+                wakeLock.acquire();
+
+                number = timelapseSessionConfig.photoStartIdx;
+                camera.makePhoto(number++, listener);
+            }
+        };
+
+        worker = new Worker("WorkerThread");
+        worker.start();
+        worker.waitUntilReady();
+        worker.handler.post(runnable);
+
+        return super.onStartCommand(intent, flags, startId);
     }
 
     private Notification getMyNotification(int type, int additionalArg) {
@@ -72,59 +136,21 @@ public class CameraService extends Service {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1));
-        timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
-        calculatedFrequencySleep = (int) (timelapseSessionConfig.calculateCaptureFrequency() * 1000);
-//        Util.log("CameraService::onBind[StartIdx: %d; AmountFrames: %d; FPS: %d; Frequency(s): %.1f; InputMinutes: %d; OutputSeconds: %d]", timelapseSessionConfig.photoStartIdx, timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.fps, timelapseSessionConfig.calculateCaptureFrequency(), timelapseSessionConfig.inputMinutes, timelapseSessionConfig.outputSeconds);
+//        Util.log("CameraService::onBind[atLeastOnceBounded=%1$B][StartIdx: %d; AmountFrames: %d; FPS: %d; Frequency(s): %.1f; InputMinutes: %d; OutputSeconds: %d]", atLeastOnceBounded, timelapseSessionConfig.photoStartIdx, timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.fps, timelapseSessionConfig.calculateCaptureFrequency(), timelapseSessionConfig.inputMinutes, timelapseSessionConfig.outputSeconds);
 
-        Runnable runnable = new Runnable() {
-            private int number;
-            private int amount = timelapseSessionConfig.calculateFramesAmount();
-
-            private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
-                @Override
-                public void onCreated() {
-                    Intent i = getSendingMessageIntent(Util.BROADCAST_MSG_CAPTURED_PHOTO);
-                    i.putExtra(Util.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, number);
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
-                    updateNotificationMadePhotos(number);
-                    nextPhotoIdx = number;
-
-                    if(number == amount) {
-                        Util.log("Koniec sesji");
-                        return;
-                    }
-
-                    try {
-                        Thread.sleep(calculatedFrequencySleep);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException(e);
-                    }
-
-                    camera.makePhoto(number++, listener);
-                }
-            };
-
-            @Override
-            public void run() {
-                if(workerStarted) {
-                    number = nextPhotoIdx;
-                } else {
-                    number = timelapseSessionConfig.photoStartIdx;
-                }
-
-                workerStarted = true;
-                camera.makePhoto(number++, listener);
-            }
-        };
-
-        worker = new Worker("WorkerThread");
-        worker.start();
-        worker.waitUntilReady();
-        worker.handler.post(runnable);
-
-        return mBinder;
+//        if(!atLeastOnceBounded) {
+//            timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
+//            calculatedFrequencySleep = (int) (timelapseSessionConfig.calculateCaptureFrequency() * 1000);
+//
+//            worker = new Worker("WorkerThread");
+//            worker.start();
+//            worker.waitUntilReady();
+//            worker.handler.post(runnable);
+//
+//            atLeastOnceBounded = true;
+//        }
+//        return mBinder;
+        return null;
     }
 
     private Intent getSendingMessageIntent(String message) {
@@ -148,6 +174,9 @@ public class CameraService extends Service {
     @Override
     public void onDestroy() {
         Util.log("CameraService::onDestroy()!");
+        if(wakeLock.isHeld())
+            wakeLock.release();
+
         stopForeground(true);
         worker.quit();
         camera.forceStopCameraDevice();

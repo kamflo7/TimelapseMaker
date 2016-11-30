@@ -1,5 +1,6 @@
 package com.loony.timelapsemaker;
 
+import android.app.ActivityManager;
 import android.content.Context;
 import android.util.Log;
 import android.widget.Toast;
@@ -22,9 +23,6 @@ public class Util {
             Log.d("test", formated);
         else
             Log.d("test", formated);
-
-//        if(textView != null)
-//            textView.append(formated + "\n");
     }
 
     public static void logEx(String tag, String str, Object... params) {
@@ -34,17 +32,21 @@ public class Util {
             Log.d(tag, formated);
         else
             Log.d(tag, formated);
-
-//        if(textView != null)
-//            textView.append(formated + "\n");
     }
 
     public static void logToast(Context context, String str, Object... params) {
         String formated = params.length == 0 ? str : String.format(str, params);
         Log.d("test", formated);
         Toast.makeText(context, formated, Toast.LENGTH_SHORT).show();
+    }
 
-//        if(textView != null)
-//            textView.append(formated + "\n");
+    public static boolean isMyServiceRunning(Context context, Class<?> serviceClass) {
+        ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
+        for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if (serviceClass.getName().equals(service.service.getClassName())) {
+                return true;
+            }
+        }
+        return false;
     }
 }
