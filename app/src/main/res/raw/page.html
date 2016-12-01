@@ -1,0 +1,24 @@
+<html>
+	<head>
+		<title>TimelapseMaker HTTP Server v1</title>
+		<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+		<script type="text/javascript">
+			$(document).ready(function() {
+				$("#btn").click(function() {
+					$.ajax({
+							url: 'http://192.168.1.12:8080/?pokemon=true',
+							success: function(html) {
+								$("#result").html("Your pokemon: " + html);
+							}
+					});
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<h1>Hello server!</h1>
+		<p>This is embedded html in res/raw directory</p>
+		<input type="button" id="btn" value="Dziabnij pokemona" />
+		<p id="result"></p>
+	</body>
+</html>

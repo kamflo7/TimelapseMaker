@@ -41,9 +41,6 @@ public class CapturingActivity extends AppCompatActivity {
         frequency = timelapseSessionConfig.calculateCaptureFrequency();
         updateTextInfo(0);
 
-//        if(!mCameraServiceBound)
-//            createCameraService();
-
         if(Util.isMyServiceRunning(this, CameraService.class)) {
             Util.log("CapturingActivity:: ok, service is running, no need to create");
         } else {    // start camera service

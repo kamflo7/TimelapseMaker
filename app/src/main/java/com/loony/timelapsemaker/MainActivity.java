@@ -178,11 +178,11 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-//        try {
-//            server = new MyServerExample(); //httpd
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
+        try {
+            server = new MyServerExample(this); //httpd
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
