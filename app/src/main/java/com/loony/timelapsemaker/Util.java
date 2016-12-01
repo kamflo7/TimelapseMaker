@@ -10,12 +10,6 @@ import android.widget.Toast;
  */
 
 public class Util {
-
-    public static String BROADCAST_FILTER = "com.loony.timelapsemaker.nyancat";
-    public static String BROADCAST_MSG = "message";
-    public static String BROADCAST_MSG_CAPTURED_PHOTO = "capturedPhoto";
-    public static String BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
-
     public static void log(String str, Object... params) {
         String formated = params.length == 0 ? str : String.format(str, params);
 
