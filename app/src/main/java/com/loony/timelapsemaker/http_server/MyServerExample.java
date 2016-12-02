@@ -9,6 +9,12 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -23,12 +29,15 @@ import static com.loony.timelapsemaker.Util.log;
 public class MyServerExample extends NanoHTTPD {
     private final static int PORT = 8080;
     private Context context;
+    private WebSocketResponseHandler responseHandler;
 
     public MyServerExample(Context context) throws IOException {
         super(PORT);
         this.context = context;
+//        responseHandler = new WebSocketResponseHandler(webSocketFactory);
+        String ip = Util.getLocalIpAddress(true);
+        log(String.format("\nRunning! Point your browers to %s:8080/ \n", ip != null ? ip : "problem"));
         start();
-        log("\nRunning! Point your browers to http://localhost:8080/ \n");
     }
 
     private Random random = new Random();
@@ -40,10 +49,11 @@ public class MyServerExample extends NanoHTTPD {
 
     @Override
     public Response serve(IHTTPSession session) {
-        Map<String, String> params = session.getParms();
-
+//        Util.log("Thread httpd serveera: " + Thread.currentThread().toString());
+        printHeaders(session.getHeaders());
         String outputHTML="";
 
+        Map<String, String> params = session.getParms();
         if(params.size() == 0) { // index
             try {
                 outputHTML = readResource(R.raw.page);
@@ -58,8 +68,17 @@ public class MyServerExample extends NanoHTTPD {
             }
         }
 
-
+//        printSessionThings(session);
         return newFixedLengthResponse(outputHTML);
+    }
+
+    private static int i;
+    private void printHeaders(Map<String, String> map) {
+        String s = String.format("{'Request': '%d', 'Headers': {", i++);
+        for(Map.Entry<String, String> entry : map.entrySet())
+            s += String.format("'%s': '%s',", entry.getKey(), entry.getValue());
+        s += "}}";
+        Util.log(s);
     }
 
     private String readResource(int id) throws IOException {
@@ -77,24 +96,3 @@ public class MyServerExample extends NanoHTTPD {
         return output;
     }
 }
-
-
-//        String msg = "<html><body><h1>Hello server</h1>\n";
-//        msg += "<p>session.getUri(): '" + session.getUri() + "' !</p>";
-//
-//        msg += "<p>Headers:</p><ul>";
-//        Map<String, String> headers = session.getHeaders();
-//        for(Map.Entry<String, String> entry : headers.entrySet())
-//            msg += String.format("<li>'%s' -> '%s'</li>", entry.getKey(), entry.getValue());
-//        msg += "</ul>";
-//
-//        Map<String, String> params = session.getParms();
-//        boolean paramsExists = params != null;
-//        msg += String.format("<p>Params: [boolean: %b; other: %s]</p><ul>", paramsExists, paramsExists ? "size: "+params.size() : "size 0");
-//        for(Map.Entry<String, String> entry : params.entrySet())
-//            msg += String.format("<li>'%s' -> '%s'</li>", entry.getKey(), entry.getValue());
-//        msg += "</ul>";
-//
-//        String queryParam = session.getQueryParameterString();
-//        msg += "<p>session.getQueryParameterString(): '" + queryParam + "'</p>";
-//        msg += "</body></html>\n";

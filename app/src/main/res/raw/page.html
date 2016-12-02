@@ -4,21 +4,63 @@
 		<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 		<script type="text/javascript">
 			$(document).ready(function() {
+				$("#resultIp").html(
+					"Pathname: " + window.location.pathname +
+					"<br />Url: " + window.location.href
+				);
+				
+				$("#btnSocket").click(function() {
+					socketTest();
+				});
+			
 				$("#btn").click(function() {
 					$.ajax({
-							url: 'http://192.168.1.12:8080/?pokemon=true',
+							url: window.location.href+'?pokemon=true',
 							success: function(html) {
 								$("#result").html("Your pokemon: " + html);
 							}
 					});
 				});
 			});
+			
+			function socketTest() {
+				if("WebSocket" in window) {
+					$("#resultSocket").html("WebSocket is supported<br />");
+					
+					var address = window.location.href.replace("http", "ws");
+					log("address: " + address);
+					var ws = new WebSocket(address);
+					
+					ws.onopen = function() {
+						log("WebSocket onopen; sending message..");
+						ws.send("test message");
+					};
+					
+					ws.onmessage = function(evt) {
+						log("[RECEIVED MSG:] " + evt.data);
+					};
+					
+					ws.onclose = function() {
+						log("WebSocket onclose");
+					};
+				} else {
+					$("#resultSocket").html("WebSocket is not supported<br />");
+				}
+			}
+			
+			function log(msg) {
+				$("#resultSocket").append(msg+"<br />");
+			}
 		</script>
 	</head>
 	<body>
 		<h1>Hello server!</h1>
 		<p>This is embedded html in res/raw directory</p>
 		<input type="button" id="btn" value="Dziabnij pokemona" />
+		<input type="button" id="btnSocket" value="socket test" />
 		<p id="result"></p>
+		<p id="resultIp"></p>
+		<p id="resultSocket"></p>
+		<img src="nyan.jpg" />
 	</body>
 </html>
