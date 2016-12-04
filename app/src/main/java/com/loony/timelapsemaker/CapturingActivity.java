@@ -94,7 +94,6 @@ public class CapturingActivity extends AppCompatActivity {
     private int calcRemainingTimeAsSeconds(long afAverageTime) {
         int differenceFrames = timelapseSessionConfig.calculateFramesAmount() - lastCapturedAmount;
         int afAvgSec = (int) afAverageTime / 1000;
-//        return (int) Math.ceil(differenceFrames * frequency);
         int res = (int) Math.ceil(differenceFrames * (frequency + afAvgSec) - afAvgSec);
         return res < 0 ? 0 : res;
     }

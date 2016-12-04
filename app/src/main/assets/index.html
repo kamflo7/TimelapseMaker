@@ -14,7 +14,7 @@
 			
 				$("#btn").click(function() {
 					$.ajax({
-							url: window.location.href+'?pokemon=true',
+							url: getBaseHref()+'pokemon.api',
 							success: function(html) {
 								$("#result").html("Your pokemon: " + html);
 							}
@@ -24,6 +24,10 @@
 			
 			function log(msg) {
 				$("#resultSocket").append(msg+"<br />");
+			}
+			
+			function getBaseHref() {
+				return "http://" + window.location.hostname + ":8080/";
 			}
 		</script>
 	</head>

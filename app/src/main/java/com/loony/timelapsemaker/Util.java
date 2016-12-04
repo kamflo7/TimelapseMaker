@@ -9,6 +9,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Created by Kamil on 11/13/2016.
@@ -47,6 +48,17 @@ public class Util {
             }
         }
         return false;
+    }
+
+    public static <K, V> String mapToString(final String label, final String newline, Map<K, V> map) {
+        String output = String.format("%s: %s", label, newline);
+
+        for(Map.Entry<K, V> entry : map.entrySet()) {
+            log("Map.Entry key: '%s'; value: '%s'", entry.getKey(), entry.getValue());
+            output += String.format("- '%s' -> '%s'%s", entry.getKey(), entry.getValue(), newline);
+        }
+
+        return output;
     }
 
     public static String getLocalIpAddress(boolean useIPv4) {
