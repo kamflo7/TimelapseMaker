@@ -134,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
             timelapseSessionConfig.inputMinutes = Integer.parseInt(editTextInputTime.getText().toString());
             timelapseSessionConfig.outputSeconds = Integer.parseInt(editTextOutputTime.getText().toString());
             timelapseSessionConfig.photoStartIdx = Integer.parseInt(editTextFileNaming.getText().toString());
+            timelapseSessionConfig.calculate();
         }
         catch (NumberFormatException e) {
             Toast.makeText(this, "Number format exception! :<", Toast.LENGTH_LONG).show();
@@ -142,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateViewSessionParameters() {
         textViewResult.setText(String.format("It will take %d frames and photo will be capturing every %.1f second",
-                timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.calculateCaptureFrequency()));
+                timelapseSessionConfig.framesAmount, timelapseSessionConfig.captureFrequency));
     }
 
     private boolean checkPermissions() {

@@ -7,6 +7,7 @@ import android.os.Environment;
 import android.util.Base64;
 
 import com.loony.timelapsemaker.R;
+import com.loony.timelapsemaker.TimelapseSessionConfig;
 import com.loony.timelapsemaker.Util;
 
 import org.json.JSONException;
@@ -35,15 +36,23 @@ public class MyServerExample extends NanoHTTPD {
     private final static int PORT = 8080;
     private Context context;
 
+    private TimelapseSessionConfig config;
     private int capturedPhotoAmount;
+    private long afAvgTime;
+    private int lastPhotoSent = -1;
 
     public void setCapturedPhotoAmount(int amount) {
         this.capturedPhotoAmount = amount;
     }
 
-    public MyServerExample(Context context) throws IOException {
+    public void setAFAverageTime(long afAvgTime) {
+        this.afAvgTime = afAvgTime;
+    }
+
+    public MyServerExample(Context context, TimelapseSessionConfig config) throws IOException {
         super(PORT);
         this.context = context;
+        this.config = config;
         String ip = Util.getLocalIpAddress(true);
         log(String.format("\nRunning! Point your browers to %s:8080/ \n", ip != null ? ip : "problem"));
         start();
@@ -93,19 +102,25 @@ public class MyServerExample extends NanoHTTPD {
 
             JSONObject o = new JSONObject();
             try {
-                o.put("pokemon_name", getRandomPokemon());
                 o.put("battery_level", Util.getBatteryLevel(context));
                 o.put("captured_photos", this.capturedPhotoAmount);
+                o.put("total_photos", config.framesAmount);
+                o.put("frequency", config.captureFrequency);
+                o.put("estimated_time", Util.calcRemainingTimeAsSeconds(afAvgTime, capturedPhotoAmount, config.framesAmount, config.captureFrequency));
 
-                File photo = new File(Environment.getExternalStorageDirectory(), "myPhoto"+(capturedPhotoAmount-1)+".jpg");
-                if(photo.exists()) {
-                    FileInputStream fis = new FileInputStream(photo);
-                    Bitmap bm = BitmapFactory.decodeStream(fis);
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    bm.compress(Bitmap.CompressFormat.JPEG, 75, baos);
-                    byte[] b = baos.toByteArray();
+                int photoToSend = capturedPhotoAmount - 1;
 
-                    o.put("photo_base64", Base64.encodeToString(b, Base64.NO_WRAP));
+                if(photoToSend != lastPhotoSent) {
+                    File photo = new File(Environment.getExternalStorageDirectory(), "myPhoto" + photoToSend + ".jpg");
+                    if (photo.exists()) {
+                        FileInputStream fis = new FileInputStream(photo);
+                        Bitmap bm = BitmapFactory.decodeStream(fis);
+                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                        bm.compress(Bitmap.CompressFormat.JPEG, 75, baos);
+                        byte[] b = baos.toByteArray();
+                        o.put("photo_base64", Base64.encodeToString(b, Base64.NO_WRAP));
+                        lastPhotoSent = photoToSend;
+                    }
                 }
 
                 return newFixedLengthResponse(o.toString());

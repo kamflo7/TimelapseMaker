@@ -10,12 +10,20 @@ import android.os.Parcelable;
 public class TimelapseSessionConfig implements Parcelable {
     public int fps, outputSeconds, inputMinutes, photoStartIdx;
 
-    public int calculateFramesAmount() {
-        return fps * outputSeconds;
-    }
+    public float captureFrequency;
+    public int framesAmount;
 
-    public float calculateCaptureFrequency() {
-        return (inputMinutes*60f)/calculateFramesAmount();
+//    public void calculateFramesAmount() {
+//        framesAmount = fps * outputSeconds;
+//    }
+//
+//    public void calculateCaptureFrequency() {
+//        captureFrequency = (inputMinutes*60f)/calculateFramesAmount();
+//    }
+
+    public void calculate() {
+        framesAmount = fps * outputSeconds;
+        captureFrequency = (inputMinutes*60f)/framesAmount;
     }
 
     public TimelapseSessionConfig() { }
@@ -32,6 +40,8 @@ public class TimelapseSessionConfig implements Parcelable {
         outputSeconds = in.readInt();
         inputMinutes = in.readInt();
         photoStartIdx = in.readInt();
+        captureFrequency = in.readFloat();
+        framesAmount = in.readInt();
     }
 
     @Override
@@ -40,6 +50,8 @@ public class TimelapseSessionConfig implements Parcelable {
         dest.writeInt(outputSeconds);
         dest.writeInt(inputMinutes);
         dest.writeInt(photoStartIdx);
+        dest.writeFloat(captureFrequency);
+        dest.writeInt(framesAmount);
     }
 
     public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {

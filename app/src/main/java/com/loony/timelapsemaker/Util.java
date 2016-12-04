@@ -103,4 +103,11 @@ public class Util {
 
         return ((float)level / (float)scale) * 100.0f;
     }
+
+    public static int calcRemainingTimeAsSeconds(long afAverageTime, int lastCapturedAmount, int totalFramesAmount, float frequencyCapture) {
+        int differenceFrames = totalFramesAmount - lastCapturedAmount;
+        int afAvgSec = (int) afAverageTime / 1000;
+        int res = (int) Math.ceil(differenceFrames * (frequencyCapture + afAvgSec) - afAvgSec);
+        return res < 0 ? 0 : res;
+    }
 }

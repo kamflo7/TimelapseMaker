@@ -24,6 +24,7 @@ public class CameraService extends Service {
     public static String BROADCAST_FILTER = "com.loony.timelapsemaker.CameraService";
     public static String BROADCAST_MSG = "message";
     public static String BROADCAST_MSG_CAPTURED_PHOTO = "capturedPhoto";
+    public static String BROADCAST_MSG_AF_AVG_TIME = "afavgtime";
     public static String BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
     public static String BROADCAST_MSG_FINISH = "finish";
 
@@ -67,12 +68,12 @@ public class CameraService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
-        calculatedFrequencySleep = (int) (timelapseSessionConfig.calculateCaptureFrequency() * 1000);
+        calculatedFrequencySleep = (int) (timelapseSessionConfig.captureFrequency * 1000);
 //        Util.log("CameraService::onStartCommand [freq(sec): %d]", calculatedFrequencySleep);
 
         Runnable runnable = new Runnable() {
             private int number;
-            private int amount = timelapseSessionConfig.calculateFramesAmount();
+            private int amount = timelapseSessionConfig.framesAmount;
             private long autoFocusTimeStart;
             private static final int AF_TIME_ACCURACY = 3;
             private long[] autoFocusTimeAverage = new long[AF_TIME_ACCURACY];
@@ -100,6 +101,7 @@ public class CameraService extends Service {
                     capturedPhotos++;
                     Intent i = getSendingMessageIntent(BROADCAST_MSG_CAPTURED_PHOTO);
                     i.putExtra(BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, number);
+                    i.putExtra(BROADCAST_MSG_AF_AVG_TIME, afAverageTime);
                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
                     updateNotificationMadePhotos(number);
 

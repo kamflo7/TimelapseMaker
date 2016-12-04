@@ -43,8 +43,8 @@ public class CapturingActivity extends AppCompatActivity {
 //        Util.logEx("lifecycle", "CapturingActivity:onCreate()");
 
         timelapseSessionConfig = getIntent().getExtras().getParcelable("timelapseSessionConfigParcel");
-        progressBar.setMax(timelapseSessionConfig.calculateFramesAmount());
-        frequency = timelapseSessionConfig.calculateCaptureFrequency();
+        progressBar.setMax(timelapseSessionConfig.framesAmount);
+        frequency = timelapseSessionConfig.captureFrequency;
         updateInformationUI(0, CameraService.DEFAULT_AVERAGE_AF_TIME);
 
         if(Util.isMyServiceRunning(this, CameraService.class) && !mCameraServiceBound) {
@@ -62,6 +62,7 @@ public class CapturingActivity extends AppCompatActivity {
             bindService(new Intent(this, HttpService.class), mConnectionHttp, 0);
         } else {
             Intent i = new Intent(this, HttpService.class);
+            i.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
             startService(i);
             bindService(i, mConnectionHttp, 0);
         }
@@ -87,27 +88,21 @@ public class CapturingActivity extends AppCompatActivity {
     }
 
     private void updateInformationUI(int currentCaptured, long afAverageTime) {
-        int seconds = calcRemainingTimeAsSeconds(afAverageTime);
+//        int seconds = calcRemainingTimeAsSeconds(afAverageTime);
+        int seconds = Util.calcRemainingTimeAsSeconds(afAverageTime, lastCapturedAmount, timelapseSessionConfig.framesAmount, frequency);
 //        seconds += afAverageTime/1000;
         int minutes = seconds / 60;
         seconds -= minutes * 60;
 
         textViewInfo.setText(String.format("Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated remaining time: %d minutes %02d seconds",
-                currentCaptured, timelapseSessionConfig.calculateFramesAmount(), frequency, minutes, seconds));
+                currentCaptured, timelapseSessionConfig.framesAmount, frequency, minutes, seconds));
     }
 
     private void updateInformationUIFinished() {
         textViewInfo.setText(String.format("Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated remaining time: %d minutes %02d seconds",
-                timelapseSessionConfig.calculateFramesAmount(), timelapseSessionConfig.calculateFramesAmount(), frequency, 0, 0));
+                timelapseSessionConfig.framesAmount, timelapseSessionConfig.framesAmount, frequency, 0, 0));
 
         progressBar.setProgress(progressBar.getMax());
-    }
-
-    private int calcRemainingTimeAsSeconds(long afAverageTime) {
-        int differenceFrames = timelapseSessionConfig.calculateFramesAmount() - lastCapturedAmount;
-        int afAvgSec = (int) afAverageTime / 1000;
-        int res = (int) Math.ceil(differenceFrames * (frequency + afAvgSec) - afAvgSec);
-        return res < 0 ? 0 : res;
     }
 
     private void updateProgressBar(int currentCaptured) {

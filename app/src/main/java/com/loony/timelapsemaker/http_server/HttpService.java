@@ -14,6 +14,7 @@ import android.widget.Toast;
 
 import com.loony.timelapsemaker.CameraService;
 import com.loony.timelapsemaker.CapturingActivity;
+import com.loony.timelapsemaker.TimelapseSessionConfig;
 import com.loony.timelapsemaker.Util;
 
 import java.io.IOException;
@@ -22,22 +23,23 @@ public class HttpService extends Service {
 
     private final IBinder mBinder = new HttpService.LocalBinder();
     private MyServerExample server;
+    private TimelapseSessionConfig timelapseSessionConfig;
 
     public HttpService() {
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
+
         try {
-            server = new MyServerExample(getApplicationContext());
+            server = new MyServerExample(getApplicationContext(), timelapseSessionConfig);
         } catch (IOException e) {
             e.printStackTrace();
         }
 
         Util.log("HttpService::onStartCommand; probably started http server");
-
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(CameraService.BROADCAST_FILTER));
-
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -60,7 +62,9 @@ public class HttpService extends Service {
                 Util.log("[CapturingActivity::onReceive] msg=%s", msg);
                 if(msg.equals(CameraService.BROADCAST_MSG_CAPTURED_PHOTO)) {
                     int lastCapturedAmount = intent.getIntExtra(CameraService.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1);
+                    long avgAFtime = intent.getLongExtra(CameraService.BROADCAST_MSG_AF_AVG_TIME, CameraService.DEFAULT_AVERAGE_AF_TIME);
                     HttpService.this.server.setCapturedPhotoAmount(lastCapturedAmount);
+                    HttpService.this.server.setAFAverageTime(avgAFtime);
                 }
             }
         }
