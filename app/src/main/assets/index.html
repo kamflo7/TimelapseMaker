@@ -3,7 +3,8 @@
 		<title>TimelapseMaker HTTP Server v1</title>
 		<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 		<script type="text/javascript">
-			var ws;
+			var repeatTime = 3000;
+			var number = 0;
 		
 			$(document).ready(function() {
 				$("#resultIp").html(
@@ -11,6 +12,7 @@
 					"<br />Url: " + window.location.href
 				);
 				
+				repeat();
 			
 				$("#btn").click(function() {
 					$.ajax({
@@ -29,6 +31,22 @@
 			function getBaseHref() {
 				return "http://" + window.location.hostname + ":8080/";
 			}
+			
+			function repeat() {
+				$.ajax({
+							url: getBaseHref()+'pokemon.api',
+							success: function(html) {
+								$("#result").html("[" + (number++) + "] Your pokemon: " + html);
+								
+								var json = JSON.parse(html);
+								if(json.photo_base64) {
+									$("#imgResult").attr("src", "data:image/png;base64," + json.photo_base64);
+								}
+								
+								setTimeout("repeat()", repeatTime);
+							}
+					});
+			}
 		</script>
 	</head>
 	<body>
@@ -37,8 +55,8 @@
 		<input type="button" id="btn" value="Dziabnij pokemona" />
 		<p id="result"></p>
 		<p id="resultIp"></p>
-		<p id="resultSocket"></p>
-		<img src="nyan.jpg" />
-		<img src="apple_ex.png" />
+		<div id="resultSocket" style="width: 800px; border: 1px ridge black">aaaa</div>
+		<!--<img width="300" src="nyan.jpg" />-->
+		<img id="imgResult" width="600" />
 	</body>
 </html>

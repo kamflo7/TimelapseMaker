@@ -15,12 +15,15 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+import com.loony.timelapsemaker.http_server.*;
 
 public class CapturingActivity extends AppCompatActivity {
 
     CameraService mCameraService;
-
     boolean mCameraServiceBound = false;
+
+    HttpService mHttpService;
+    private boolean mHttpServiceBound = false;
 
     private TextView textViewInfo;
     private ProgressBar progressBar;
@@ -30,7 +33,6 @@ public class CapturingActivity extends AppCompatActivity {
     private int lastCapturedAmount;
     private float frequency;
     private boolean serviceMadeAtLeastOnePhoto = false;
-
     private boolean needRefreshUIAfterCrash = false;
 
     @Override
@@ -46,7 +48,6 @@ public class CapturingActivity extends AppCompatActivity {
         updateInformationUI(0, CameraService.DEFAULT_AVERAGE_AF_TIME);
 
         if(Util.isMyServiceRunning(this, CameraService.class) && !mCameraServiceBound) {
-//            Util.log("CapturingActivity:: ok, service is running, no need to create");
             needRefreshUIAfterCrash = true;
             Intent i = new Intent(this, CameraService.class);
             bindService(i, mConnection, 0);
@@ -55,6 +56,14 @@ public class CapturingActivity extends AppCompatActivity {
             intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
             startService(intent);
             bindService(intent, mConnection, 0);
+        }
+
+        if(Util.isMyServiceRunning(this, HttpService.class) && !mHttpServiceBound) {
+            bindService(new Intent(this, HttpService.class), mConnectionHttp, 0);
+        } else {
+            Intent i = new Intent(this, HttpService.class);
+            startService(i);
+            bindService(i, mConnectionHttp, 0);
         }
     }
 
@@ -67,8 +76,11 @@ public class CapturingActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 unbindService(mConnection);
+                unbindService(mConnectionHttp);
                 mCameraServiceBound = false;
+                mHttpServiceBound = false;
                 stopService(new Intent(CapturingActivity.this, CameraService.class));
+                stopService(new Intent(CapturingActivity.this, HttpService.class));
                 finish();
             }
         });
@@ -129,6 +141,20 @@ public class CapturingActivity extends AppCompatActivity {
         }
     };
 
+    private ServiceConnection mConnectionHttp = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            HttpService.LocalBinder binder = (HttpService.LocalBinder) service;
+            mHttpService = binder.getService();
+            mHttpServiceBound = true;
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            mHttpServiceBound = false;
+        }
+    };
+
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -178,6 +204,10 @@ public class CapturingActivity extends AppCompatActivity {
 //        Util.logEx("lifecycle", "CapturingActivity::onDestroy()");
         if(mCameraServiceBound)
             unbindService(mConnection);
+
+        if(mHttpServiceBound)
+            unbindService(mConnectionHttp);
+
         super.onDestroy();
     }
 }

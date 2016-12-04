@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     // HttpService
-    private MyServerExample server; //httpd
+//    private MyServerExample server; //httpd
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -178,19 +178,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        try {
-            server = new MyServerExample(this); //httpd
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+//        try {
+//            server = new MyServerExample(this); //httpd
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        if(server != null) {
-            server.stop(); //httpd
-        }
+//        if(server != null) {
+//            server.stop(); //httpd
+//        }
     }
 
     @Override

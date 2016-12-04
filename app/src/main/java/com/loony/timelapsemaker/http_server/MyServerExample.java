@@ -1,9 +1,22 @@
 package com.loony.timelapsemaker.http_server;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.os.Environment;
+import android.util.Base64;
+
 import com.loony.timelapsemaker.R;
 import com.loony.timelapsemaker.Util;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,6 +34,12 @@ import static com.loony.timelapsemaker.Util.mapToString;
 public class MyServerExample extends NanoHTTPD {
     private final static int PORT = 8080;
     private Context context;
+
+    private int capturedPhotoAmount;
+
+    public void setCapturedPhotoAmount(int amount) {
+        this.capturedPhotoAmount = amount;
+    }
 
     public MyServerExample(Context context) throws IOException {
         super(PORT);
@@ -71,7 +90,35 @@ public class MyServerExample extends NanoHTTPD {
 
     private Response serveAPI(IHTTPSession session, String uri) {
         if(uri.contains("pokemon.api")) {
-            return newFixedLengthResponse(getRandomPokemon());
+
+            JSONObject o = new JSONObject();
+            try {
+                o.put("pokemon_name", getRandomPokemon());
+                o.put("battery_level", Util.getBatteryLevel(context));
+                o.put("captured_photos", this.capturedPhotoAmount);
+
+                File photo = new File(Environment.getExternalStorageDirectory(), "myPhoto"+(capturedPhotoAmount-1)+".jpg");
+                if(photo.exists()) {
+                    FileInputStream fis = new FileInputStream(photo);
+                    Bitmap bm = BitmapFactory.decodeStream(fis);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    bm.compress(Bitmap.CompressFormat.JPEG, 75, baos);
+                    byte[] b = baos.toByteArray();
+
+                    o.put("photo_base64", Base64.encodeToString(b, Base64.NO_WRAP));
+                }
+
+                return newFixedLengthResponse(o.toString());
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+                return newFixedLengthResponse("error");
+            } catch(FileNotFoundException e) {
+                return newFixedLengthResponse("error");
+            }
+
+
+//            return newFixedLengthResponse(getRandomPokemon() + " | Battery level: " + Util.getBatteryLevel(context) + " | Captured photos: " + this.capturedPhotoAmount);
         }
 
         return null;
