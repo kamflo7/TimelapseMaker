@@ -3,6 +3,8 @@
 		<title>TimelapseMaker HTTP Server v1</title>
 		<script type="text/javascript" src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 		<script type="text/javascript">
+			var ws;
+		
 			$(document).ready(function() {
 				$("#resultIp").html(
 					"Pathname: " + window.location.pathname +
@@ -29,11 +31,11 @@
 					
 					var address = window.location.href.replace("http", "ws");
 					log("address: " + address);
-					var ws = new WebSocket(address);
+					ws = new WebSocket(address);
 					
 					ws.onopen = function() {
 						log("WebSocket onopen; sending message..");
-						ws.send("test message");
+						ws.send("ping");
 					};
 					
 					ws.onmessage = function(evt) {
