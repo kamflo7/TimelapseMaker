@@ -70,6 +70,7 @@ public class MainActivity extends AppCompatActivity {
     private TimelapseSessionConfig timelapseSessionConfig = new TimelapseSessionConfig();
 
 
+
     // HttpService
 //    private MyServerExample server; //httpd
 
@@ -79,10 +80,11 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initUI();
 
-        if(!checkPermissions())
-            makePermissions();
-//        else
-//            afterCheckPermission();
+        Util.logEx("lifecycle", "MainActivity::onCreate(Bundle %s); var permissionsGranted=%s", savedInstanceState != null ? "exists" : "doesn't exist", Boolean.toString(permissionsGranted));
+
+        if(savedInstanceState == null)
+            if(!checkPermissions())
+                makePermissions();
     }
 
     private void initUI() {
@@ -198,11 +200,12 @@ public class MainActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
 
-        Util.log("Activity::onStop");
+        Util.logEx("lifecycle", "MainActivity::onStop");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        Util.logEx("lifecycle", "MainActivity::onDestroy");
     }
 }

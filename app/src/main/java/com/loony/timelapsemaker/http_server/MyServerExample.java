@@ -131,8 +131,6 @@ public class MyServerExample extends NanoHTTPD {
             } catch(FileNotFoundException e) {
                 return newFixedLengthResponse("error");
             }
-
-
 //            return newFixedLengthResponse(getRandomPokemon() + " | Battery level: " + Util.getBatteryLevel(context) + " | Captured photos: " + this.capturedPhotoAmount);
         }
 

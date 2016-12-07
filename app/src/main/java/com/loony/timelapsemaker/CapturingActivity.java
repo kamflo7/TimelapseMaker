@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.IBinder;
+import android.os.PersistableBundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -40,32 +41,67 @@ public class CapturingActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_capturing);
         initUI();
-//        Util.logEx("lifecycle", "CapturingActivity:onCreate()");
+        Util.logEx("lifecycle", "CapturingActivity:onCreate(Bundle %s)", savedInstanceState != null ? "exists" : "doesn't exist");
 
-        timelapseSessionConfig = getIntent().getExtras().getParcelable("timelapseSessionConfigParcel");
+        Intent intentCamera = new Intent(this, CameraService.class);
+        Intent intentHttp = new Intent(this, HttpService.class);
+
+        if(savedInstanceState == null) {    // assumed that null is only once, when start. Later if something crashes Activity, here should be something
+            Util.logEx("lifecycle", "CapturingActivity::onCreate; #IF with NULL - starting services and binding");
+            timelapseSessionConfig = getIntent().getExtras().getParcelable("timelapseSessionConfigParcel");
+            frequency = timelapseSessionConfig.captureFrequency;
+
+            intentCamera.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+            startService(intentCamera);
+            bindService(intentCamera, mConnection, 0);
+
+            intentHttp.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+            startService(intentHttp);
+            bindService(intentHttp, mConnectionHttp, 0);
+        } else {
+            Util.logEx("lifecycle", "CapturingActivity::onCreate; #IF withOUT NULL - only binding to assumed started services, aren't they?");
+
+            timelapseSessionConfig = savedInstanceState.getParcelable("timelapseconfig");
+            if(timelapseSessionConfig == null) Util.log("Fatal error; error retrieving timelapseSession object via savedInstanceState");
+            frequency = timelapseSessionConfig.captureFrequency;
+
+            needRefreshUIAfterCrash = true;
+
+            if(!mCameraServiceBound)
+                bindService(intentCamera, mConnection, 0);
+
+            if(!mHttpServiceBound)
+                bindService(intentHttp, mConnectionHttp, 0);
+        }
+
         progressBar.setMax(timelapseSessionConfig.framesAmount);
-        frequency = timelapseSessionConfig.captureFrequency;
         updateInformationUI(0, CameraService.DEFAULT_AVERAGE_AF_TIME);
 
-        if(Util.isMyServiceRunning(this, CameraService.class) && !mCameraServiceBound) {
-            needRefreshUIAfterCrash = true;
-            Intent i = new Intent(this, CameraService.class);
-            bindService(i, mConnection, 0);
-        } else {    // start camera service
-            Intent intent = new Intent(this, CameraService.class);
-            intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
-            startService(intent);
-            bindService(intent, mConnection, 0);
-        }
+//        if(Util.isMyServiceRunning(this, CameraService.class) && !mCameraServiceBound) {
+//            needRefreshUIAfterCrash = true;
+//            Intent i = new Intent(this, CameraService.class);
+//            bindService(i, mConnection, 0);
+//        } else {    // start camera service
+//            Intent intent = new Intent(this, CameraService.class);
+//            intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+//            startService(intent);
+//            bindService(intent, mConnection, 0);
+//        }
+//
+//        if(Util.isMyServiceRunning(this, HttpService.class) && !mHttpServiceBound) {
+//            bindService(new Intent(this, HttpService.class), mConnectionHttp, 0);
+//        } else {
+//            Intent i = new Intent(this, HttpService.class);
+//            i.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+//            startService(i);
+//            bindService(i, mConnectionHttp, 0);
+//        }
+    }
 
-        if(Util.isMyServiceRunning(this, HttpService.class) && !mHttpServiceBound) {
-            bindService(new Intent(this, HttpService.class), mConnectionHttp, 0);
-        } else {
-            Intent i = new Intent(this, HttpService.class);
-            i.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
-            startService(i);
-            bindService(i, mConnectionHttp, 0);
-        }
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelable("timelapseconfig", timelapseSessionConfig);
     }
 
     private void initUI() {
@@ -196,7 +232,7 @@ public class CapturingActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-//        Util.logEx("lifecycle", "CapturingActivity::onDestroy()");
+        Util.logEx("lifecycle", "CapturingActivity::onDestroy()");
         if(mCameraServiceBound)
             unbindService(mConnection);
 

@@ -127,6 +127,7 @@ public class MyCamera {
 
     public interface OnPhotoCreatedListener {
         void onCreated();
+        void onFailed();
     }
 
     private OnPhotoCreatedListener listener;
@@ -301,6 +302,9 @@ public class MyCamera {
         public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
             Util.log("Capture failed in MyCamera[Request: %s][Failure: Frame %d; Reason: %d; SequenceID: %d; wasImgCaptured: %d]", request.toString(),
                     failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
+
+            listener.onFailed();
+
             super.onCaptureFailed(session, request, failure);
         }
 
@@ -335,6 +339,9 @@ public class MyCamera {
                 public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
                     Util.log("Capture failed FINAL in MyCamera[Request: %s][Failure: Frame %d; Reason: %d; SequenceID: %d; wasImgCaptured: %d]", request.toString(),
                             failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
+
+                    listener.onFailed();
+
                     super.onCaptureFailed(session, request, failure);
                 }
             };

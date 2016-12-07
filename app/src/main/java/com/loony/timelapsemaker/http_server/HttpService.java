@@ -30,6 +30,12 @@ public class HttpService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if(intent == null) {
+            Util.log("HttpService::onStartCommand is null, fatal exception; have a look at this");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
 
         try {

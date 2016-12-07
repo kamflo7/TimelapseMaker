@@ -67,6 +67,12 @@ public class CameraService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        if(intent == null) {
+            Util.log("CameraService::onStartCommand is null, fatal exception; have a look at this");
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
         calculatedFrequencySleep = (int) (timelapseSessionConfig.captureFrequency * 1000);
 //        Util.log("CameraService::onStartCommand [freq(sec): %d]", calculatedFrequencySleep);
@@ -92,8 +98,34 @@ public class CameraService extends Service {
             }
 
             private MyCamera.OnPhotoCreatedListener listener = new MyCamera.OnPhotoCreatedListener() {
+                private int failsInARowCounter = 0;
+
+                @Override
+                public void onFailed() {
+                    failsInARowCounter++;
+
+                    if (failsInARowCounter == 2) {
+                        Util.log("failsInARowCounter == 2, NOTHING TO DO HERE! Aborting everything..");
+                        if (wakeLock.isHeld())
+                            wakeLock.release();
+                        CameraService.this.stopSelf();
+                        return;
+                    }
+
+                    Util.log("Failed to create photo. Trying again in a few seconds..");
+                    try {
+                        Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException(e);
+                    }
+                    camera.makePhoto(number, listener); // number already incremented ;)
+                }
+
                 @Override
                 public void onCreated() {
+                    failsInARowCounter = 0;
+
                     autoFocusTimeAverage[number % AF_TIME_ACCURACY] = System.currentTimeMillis() - autoFocusTimeStart;
                     afAverageTime = calculateAverageAutoFocusTime();
 //                    Util.log("afAverageTime: " + afAverageTime);
