@@ -109,4 +109,12 @@
         android:layout_height="wrap_content"
         android:text="Start capturing"/>
 
+    <Button
+        android:text="Test capture"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:id="@+id/button"
+        android:onClick="testCapture"
+        />
+
 </LinearLayout>

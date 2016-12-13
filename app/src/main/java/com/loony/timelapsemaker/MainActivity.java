@@ -70,9 +70,28 @@ public class MainActivity extends AppCompatActivity {
     private TimelapseSessionConfig timelapseSessionConfig = new TimelapseSessionConfig();
 
 
+    private MyCamera cam;
 
-    // HttpService
-//    private MyServerExample server; //httpd
+    public void testCapture(View v) {
+        cam = new MyCamera(this, new MyCamera.CameraStateChange() {
+            @Override
+            public void onCameraOpen() {
+//                cam.makePhoto(0, new MyCamera.OnPhotoCreatedListener() {
+//                    @Override
+//                    public void onCreated() {
+//                        cam.forceStopCameraDevice();
+//                    }
+//
+//                    @Override
+//                    public void onFailed() {
+//                        cam.forceStopCameraDevice();
+//                    }
+//                });
+                cam.testMakePhoto();
+            }
+        });
+
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

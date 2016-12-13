@@ -35,13 +35,13 @@ public class CameraService extends Service {
     public static final long DEFAULT_AVERAGE_AF_TIME = 3000;
 
     private final IBinder mBinder = new LocalBinder();
-    private MyCamera camera;
     private Worker worker;
     private TimelapseSessionConfig timelapseSessionConfig;
     private int calculatedFrequencySleep;
 
     private PowerManager powerManager;
     private PowerManager.WakeLock wakeLock;
+    private MyCamera camera;
 
     private long afAverageTime = DEFAULT_AVERAGE_AF_TIME;
     private int capturedPhotos;
@@ -59,7 +59,6 @@ public class CameraService extends Service {
     public void onCreate() {
         super.onCreate();
         Util.log("CameraService::onCreate");
-        camera = new MyCamera(getApplicationContext());
 
         powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1));
@@ -150,7 +149,8 @@ public class CameraService extends Service {
                     }
 
                     try {
-                        Thread.sleep(calculatedFrequencySleep);
+                        if(calculatedFrequencySleep > 0)
+                            Thread.sleep(calculatedFrequencySleep);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new RuntimeException(e);
@@ -170,8 +170,15 @@ public class CameraService extends Service {
                 wakeLock.acquire();
 
                 number = timelapseSessionConfig.photoStartIdx;
-                camera.makePhoto(number++, listener);
-                autoFocusTimeStart = System.currentTimeMillis();
+//                camera.makePhoto(number++, listener);
+
+                camera = new MyCamera(CameraService.this.getApplicationContext(), new MyCamera.CameraStateChange() {
+                    @Override
+                    public void onCameraOpen() {
+                        autoFocusTimeStart = System.currentTimeMillis();
+                        camera.makePhoto(number++, listener);
+                    }
+                });
             }
         };
 
@@ -245,7 +252,10 @@ public class CameraService extends Service {
 
         stopForeground(true);
         worker.quit();
-        camera.forceStopCameraDevice();
+        if(camera != null)
+            camera.forceStopCameraDevice();
+
+//        camera.forceStopCameraDevice();
         super.onDestroy();
     }
 

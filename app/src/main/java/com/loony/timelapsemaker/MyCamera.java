@@ -36,22 +36,21 @@ import java.util.Arrays;
 
 public class MyCamera {
     private static final int IMAGE_FORMAT = ImageFormat.JPEG;//256; // JPEG
-//    private static final int IMAGE_FORMAT = ImageFormat.FLEX_RGB_888;
 
     private Context context;
 
     private CameraManager manager;
     private String cameraId;
     private CameraCharacteristics cameraCharacteristics;
-    private boolean cameraFound = false;
-
-    private int currentNumberPhoto;
-    CaptureRequest.Builder mPreviewRequestBuilder;
+    private CaptureRequest.Builder mPreviewRequestBuilder;
     private CameraDevice mCameraDevice;
     private ImageReader mImageReader;
-    private Size largestSize;
     private CameraCaptureSession mCaptureSession;
     private CaptureRequest mPreviewRequest;
+
+    private boolean cameraFound = false;
+    private int currentNumberPhoto;
+    private Size largestSize;
     private StreamConfigurationMap map;
 
     private static final int STATE_PREVIEW = 0;
@@ -66,13 +65,21 @@ public class MyCamera {
     private Surface previewSurface;
     private boolean startedRepeatedRequest;
 
-    private int countStateWaitingLock;
-    private int countStatePreview;
+    public interface CameraStateChange {
+        void onCameraOpen();
+    }
 
-    public MyCamera(Context context) {
+    public interface OnPhotoCreatedListener {
+        void onCreated();
+        void onFailed();
+    }
+
+    private CameraStateChange listenerChange;
+    private OnPhotoCreatedListener listener;
+
+    public MyCamera(Context context, CameraStateChange l) {
         this.context = context;
-
-        init();
+        init(l);
     }
 
     public void forceStopCameraDevice() {
@@ -81,7 +88,8 @@ public class MyCamera {
         }
     }
 
-    private void init() {
+    private void init(CameraStateChange listenerChange) {
+        this.listenerChange = listenerChange;
         manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 
         try {
@@ -112,6 +120,38 @@ public class MyCamera {
         }
 
 //        showAvailableFormatsAndSizes();
+//        showSceneModes();
+        //Util.log("LENS_INFO_MINIMUM_FOCUS_DISTANCE is %.003f", cameraCharacteristics.get(CameraCharacteristics.LENS_INFO_MINIMUM_FOCUS_DISTANCE));
+        int[] availableModes = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES);
+        String modesStr = "";
+        for(int mode : availableModes)
+            modesStr += mode + ", ";
+        Util.log("CONTROL_AF_AVAILABLE_MODES -> " + modesStr);
+
+        setUpCameraOutputs();
+
+        dummySurface = new SurfaceTexture(10);
+        dummySurface.setDefaultBufferSize(largestSize.getWidth(), largestSize.getHeight());
+        previewSurface = new Surface(dummySurface);
+
+        try {
+            manager.openCamera(cameraId, mStateCallback, null);
+        } catch(SecurityException e) {
+            throw new RuntimeException("MyCamera: " + e.getMessage());
+        }
+        catch(CameraAccessException e) {
+            throw new RuntimeException("MyCamera: " + e.getMessage());
+        }
+
+    }
+
+    private void showSceneModes() {
+        int[] scenes = cameraCharacteristics.get(CameraCharacteristics.CONTROL_AVAILABLE_SCENE_MODES);
+        String str = "";
+        for(int s : scenes) {
+            str += s + ", ";
+        }
+        Util.log("Available scene modes: " + str);
     }
 
     private void showAvailableFormatsAndSizes() {
@@ -125,44 +165,74 @@ public class MyCamera {
             Util.log("Available size for JPEG: %dx%d", size.getWidth(), size.getHeight());
     }
 
-    public interface OnPhotoCreatedListener {
-        void onCreated();
-        void onFailed();
-    }
-
-    private OnPhotoCreatedListener listener;
-
     // #1
     public void makePhoto(int number, OnPhotoCreatedListener l) {
         Util.log("makePhoto(%d) called", number);
-        if(!cameraFound) return;
         currentNumberPhoto = number;
         this.listener = l;
+        waitingLockCount = 0;
 
+        createCameraPreviewSession();
+    }
+
+    public void testMakePhoto() {
         try {
-            setUpCameraOutputs();
-            manager.openCamera(cameraId, mStateCallback, null);
-        } catch(SecurityException e) {
-            throw new RuntimeException("MyCamera: " + e.getMessage());
-        }
-        catch(CameraAccessException e) {
-            throw new RuntimeException("MyCamera: " + e.getMessage());
+            mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+            mPreviewRequestBuilder.addTarget(mImageReader.getSurface());
+            setCameraOrientation(mPreviewRequestBuilder);
+
+            mCameraDevice.createCaptureSession(Arrays.asList(mImageReader.getSurface()), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(CameraCaptureSession session) {
+                    Util.log("Config ok");
+                    mCaptureSession = session;
+                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_EDOF);
+                    try {
+                        mCaptureSession.capture(mPreviewRequestBuilder.build(), new CameraCaptureSession.CaptureCallback() {
+                            @Override
+                            public void onCaptureProgressed(CameraCaptureSession session, CaptureRequest request, CaptureResult partialResult) {
+                                super.onCaptureProgressed(session, request, partialResult);
+                                Util.log("onCaptureProgressed");
+                            }
+
+                            @Override
+                            public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
+                                super.onCaptureCompleted(session, request, result);
+                                Util.log("onCaptureCompleted");
+                            }
+
+                            @Override
+                            public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+                                super.onCaptureFailed(session, request, failure);
+                                Util.log("onCaptureFailed");
+                            }
+                        }, null);
+                    } catch(CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(CameraCaptureSession session) {
+                    Util.log("Config failed");
+                }
+            }, null);
+
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
         }
     }
 
     // #2
     private void setUpCameraOutputs() {
-        largestSize = map.getOutputSizes(IMAGE_FORMAT)[1];
+        largestSize = map.getOutputSizes(IMAGE_FORMAT)[0];
         mImageReader = ImageReader.newInstance(largestSize.getWidth(), largestSize.getHeight(), IMAGE_FORMAT, 2);
         mImageReader.setOnImageAvailableListener(mOnImageAvailableListener, null);
     }
 
     // #4
     private void createCameraPreviewSession() {
-        dummySurface = new SurfaceTexture(10);
-        dummySurface.setDefaultBufferSize(largestSize.getWidth(), largestSize.getHeight());
-        previewSurface = new Surface(dummySurface);
-
         try {
             mPreviewRequestBuilder = mCameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             mPreviewRequestBuilder.addTarget(previewSurface);
@@ -171,16 +241,10 @@ public class MyCamera {
             mCameraDevice.createCaptureSession(Arrays.asList(previewSurface, mImageReader.getSurface()), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(CameraCaptureSession session) {
-                    if(mCameraDevice == null) {
-                        Util.log("error: mCameraDevice is null");
-                        return;
-                    }
-
                     mCaptureSession = session;
 
                     mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                     mPreviewRequest = mPreviewRequestBuilder.build();
-//                    Util.log("CreateCameraPreviewSession[Request: %s]", mPreviewRequest.toString());
                     try {
                         startedRepeatedRequest = false;
                         mCaptureSession.setRepeatingRequest(mPreviewRequest, mCaptureCallback, null);
@@ -197,7 +261,6 @@ public class MyCamera {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
-
     }
 
     private void lockFocus() {
@@ -216,7 +279,8 @@ public class MyCamera {
         @Override
         public void onOpened(CameraDevice camera) {
             mCameraDevice = camera;
-            createCameraPreviewSession();
+            listenerChange.onCameraOpen();
+//            createCameraPreviewSession();
         }
 
         @Override
@@ -233,23 +297,34 @@ public class MyCamera {
         }
     };
 
+    private int waitingLockCount;
+    private float lastLens;
+    //private boolean searchingLens = true;
+
     private CameraCaptureSession.CaptureCallback mCaptureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) {
             if(!startedRepeatedRequest) {
                 lockFocus();
                 startedRepeatedRequest = true;
-                countStateWaitingLock = 0;
-                countStatePreview = 0;
             }
+
+//            Util.log("process() executed. mState = " + mState);
 
             switch(mState) {
                 case STATE_PREVIEW: {
-                    countStatePreview++;
                     break;
                 }
                 case STATE_WAITING_LOCK: {
-                    countStateWaitingLock++;
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
+                    Float lensDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE);
+
+//                    if(lensDistance != null)
+//                        Util.log("lensDistance is %.0004f", lensDistance.floatValue());
+//                    else
+//                        Util.log("lensDistance is null");
+                    if(lensDistance != null) lastLens = lensDistance.floatValue();
+                    waitingLockCount++;
+
                     if (afState == null) {
 //                        Util.log("afState is null");
                         captureStillPicture();
@@ -322,6 +397,8 @@ public class MyCamera {
             Surface surfaceTarget = mImageReader.getSurface();
             captureBuilder.addTarget(surfaceTarget);
             captureBuilder.set(CaptureRequest.JPEG_QUALITY, (byte) 90);
+//            captureBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE);
+//            captureBuilder.set(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_HDR);
             setCameraOrientation(captureBuilder);
 
             captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);// Use the same AE and AF modes as the preview.
@@ -330,9 +407,19 @@ public class MyCamera {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
 //                    Util.log("captureStillPicture::onCaptureCompleted");
+
+                    // ##
+                    mPreviewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                    try {
+                        mCaptureSession.capture(mPreviewRequestBuilder.build(), mCaptureCallback, null);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                    // ##
+
                     mState = STATE_PREVIEW;
                     session.close();
-                    mCameraDevice.close();
+//                    mCameraDevice.close();
                 }
 
                 @Override
@@ -340,6 +427,9 @@ public class MyCamera {
                     Util.log("Capture failed FINAL in MyCamera[Request: %s][Failure: Frame %d; Reason: %d; SequenceID: %d; wasImgCaptured: %d]", request.toString(),
                             failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
 
+                    mState = STATE_PREVIEW;
+                    session.close();
+//                    startedRepeatedRequest = false;
                     listener.onFailed();
 
                     super.onCaptureFailed(session, request, failure);
@@ -347,8 +437,6 @@ public class MyCamera {
             };
 
             mCaptureSession.stopRepeating();
-//            Util.log("Count statePreview %d; stateWaitingLock: %d", countStatePreview, countStateWaitingLock);
-//            Util.log("Now will be capturing final image");
             mCaptureSession.capture(captureBuilder.build(), CaptureCallback, null);
         } catch (CameraAccessException e) {
             e.printStackTrace();
@@ -368,20 +456,19 @@ public class MyCamera {
     private ImageReader.OnImageAvailableListener mOnImageAvailableListener = new ImageReader.OnImageAvailableListener() {
         @Override
         public void onImageAvailable(ImageReader reader) {
+            Util.log("CaptureCompleted; waitingLockCount: %d; lastLens: %.003f", waitingLockCount, lastLens);
+
             Image image = reader.acquireLatestImage();
-//            Util.log("onImageAvailable, height: " + image.getHeight());
             saveImageToDisk(image);
             image.close();
-//            reader.setOnImageAvailableListener(null, null);
-            reader.close();
-            mImageReader.close();
-            mImageReader = null;
+//            reader.close();
+//            mImageReader.close();
+//            mImageReader = null;
 
-            dummySurface.release();
-            previewSurface.release();
-            dummySurface = null;
-            previewSurface = null;
-
+//            dummySurface.release();
+//            previewSurface.release();
+//            dummySurface = null;
+//            previewSurface = null;
             if(listener != null)
                 listener.onCreated();
         }
