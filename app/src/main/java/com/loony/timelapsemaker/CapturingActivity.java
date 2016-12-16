@@ -7,7 +7,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.IBinder;
-import android.os.PersistableBundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -16,92 +15,65 @@ import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.loony.timelapsemaker.camera.CameraService;
+import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.http_server.*;
 
+import java.util.Locale;
+
 public class CapturingActivity extends AppCompatActivity {
+    private static final String INSTANCE_STATE_TIMELAPSE_CONFIG = "timelapseconfig";
+    private static final float CAPTURE_PHOTO_DEFAULT_AVERAGE_DURATION_SECONDS = 0.5f;
 
-    CameraService mCameraService;
-    boolean mCameraServiceBound = false;
-
-    HttpService mHttpService;
+    private CameraService mCameraService;
+    private boolean mCameraServiceBound = false;
+    private HttpService mHttpService;
     private boolean mHttpServiceBound = false;
 
     private TextView textViewInfo;
     private ProgressBar progressBar;
     private Button dismiss;
 
-    private TimelapseSessionConfig timelapseSessionConfig;
-    private int lastCapturedAmount;
-    private float frequency;
-    private boolean serviceMadeAtLeastOnePhoto = false;
-    private boolean needRefreshUIAfterCrash = false;
+    private TimelapseConfig timelapseConfig;
+
+    private int receiveCapturedPhotosAmount = 0;
+    private float receiveCapturePhotoAverageDurationSeconds = CAPTURE_PHOTO_DEFAULT_AVERAGE_DURATION_SECONDS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_capturing);
         initUI();
-        Util.logEx("lifecycle", "CapturingActivity:onCreate(Bundle %s)", savedInstanceState != null ? "exists" : "doesn't exist");
+//        Util.logEx("lifecycle", "CapturingActivity:onCreate(Bundle %s)", savedInstanceState != null ? "exists" : "doesn't exist");
 
         Intent intentCamera = new Intent(this, CameraService.class);
         Intent intentHttp = new Intent(this, HttpService.class);
 
-        if(savedInstanceState == null) {    // assumed that null is only once, when start. Later if something crashes Activity, here should be something
-            Util.logEx("lifecycle", "CapturingActivity::onCreate; #IF with NULL - starting services and binding");
-            timelapseSessionConfig = getIntent().getExtras().getParcelable("timelapseSessionConfigParcel");
-            frequency = timelapseSessionConfig.captureFrequency;
+        if(savedInstanceState == null) { // TL;DR: ONLY ON FIRST START; assumes that null is only once, when start. Later if something crashes Activity, here should be something
+            timelapseConfig = getIntent().getExtras().getParcelable(MainActivity.PARCEL_TIMELAPSE_CONFIG);
 
-            intentCamera.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+            intentCamera.putExtra(MainActivity.PARCEL_TIMELAPSE_CONFIG, timelapseConfig);
             startService(intentCamera);
             bindService(intentCamera, mConnection, 0);
 
-            intentHttp.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+            intentHttp.putExtra(MainActivity.PARCEL_TIMELAPSE_CONFIG, timelapseConfig);
             startService(intentHttp);
             bindService(intentHttp, mConnectionHttp, 0);
         } else {
-            Util.logEx("lifecycle", "CapturingActivity::onCreate; #IF withOUT NULL - only binding to assumed started services, aren't they?");
-
-            timelapseSessionConfig = savedInstanceState.getParcelable("timelapseconfig");
-            if(timelapseSessionConfig == null) Util.log("Fatal error; error retrieving timelapseSession object via savedInstanceState");
-            frequency = timelapseSessionConfig.captureFrequency;
-
-            needRefreshUIAfterCrash = true;
-
-            if(!mCameraServiceBound)
-                bindService(intentCamera, mConnection, 0);
-
-            if(!mHttpServiceBound)
-                bindService(intentHttp, mConnectionHttp, 0);
+            timelapseConfig = savedInstanceState.getParcelable(INSTANCE_STATE_TIMELAPSE_CONFIG);
+            bindService(intentCamera, mConnection, 0);
+            bindService(intentHttp, mConnectionHttp, 0);
         }
 
-        progressBar.setMax(timelapseSessionConfig.framesAmount);
-        updateInformationUI(0, CameraService.DEFAULT_AVERAGE_AF_TIME);
-
-//        if(Util.isMyServiceRunning(this, CameraService.class) && !mCameraServiceBound) {
-//            needRefreshUIAfterCrash = true;
-//            Intent i = new Intent(this, CameraService.class);
-//            bindService(i, mConnection, 0);
-//        } else {    // start camera service
-//            Intent intent = new Intent(this, CameraService.class);
-//            intent.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
-//            startService(intent);
-//            bindService(intent, mConnection, 0);
-//        }
-//
-//        if(Util.isMyServiceRunning(this, HttpService.class) && !mHttpServiceBound) {
-//            bindService(new Intent(this, HttpService.class), mConnectionHttp, 0);
-//        } else {
-//            Intent i = new Intent(this, HttpService.class);
-//            i.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
-//            startService(i);
-//            bindService(i, mConnectionHttp, 0);
-//        }
+        progressBar.setMax(timelapseConfig.getPhotosAmount());
+        updateInformationUI();
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putParcelable("timelapseconfig", timelapseSessionConfig);
+        outState.putParcelable(INSTANCE_STATE_TIMELAPSE_CONFIG, timelapseConfig);
     }
 
     private void initUI() {
@@ -112,8 +84,11 @@ public class CapturingActivity extends AppCompatActivity {
         dismiss.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                unbindService(mConnection);
-                unbindService(mConnectionHttp);
+                if(mCameraServiceBound)
+                    unbindService(mConnection);
+                if(mHttpServiceBound)
+                    unbindService(mConnectionHttp);
+
                 mCameraServiceBound = false;
                 mHttpServiceBound = false;
                 stopService(new Intent(CapturingActivity.this, CameraService.class));
@@ -123,47 +98,23 @@ public class CapturingActivity extends AppCompatActivity {
         });
     }
 
-    private void updateInformationUI(int currentCaptured, long afAverageTime) {
-//        int seconds = calcRemainingTimeAsSeconds(afAverageTime);
-        int seconds = Util.calcRemainingTimeAsSeconds(afAverageTime, lastCapturedAmount, timelapseSessionConfig.framesAmount, frequency);
-//        seconds += afAverageTime/1000;
-        int minutes = seconds / 60;
-        seconds -= minutes * 60;
+    private void updateInformationUI() {
+        textViewInfo.setText(String.format(Locale.ENGLISH, "Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated approximately remaining time: %s\nAverage duration of capture photo: %.1fs",
+            receiveCapturedPhotosAmount,
+            timelapseConfig.getPhotosAmount(),
+            timelapseConfig.getFrequencyCaptureMiliseconds()/1000f,
+                Util.secondsToTime(timelapseConfig.calculator.getTotalSecondsTimeToCaptureAll(timelapseConfig.getPhotosAmount()-receiveCapturedPhotosAmount, (long) receiveCapturePhotoAverageDurationSeconds * 1000)),
+            receiveCapturePhotoAverageDurationSeconds));
 
-        textViewInfo.setText(String.format("Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated remaining time: %d minutes %02d seconds",
-                currentCaptured, timelapseSessionConfig.framesAmount, frequency, minutes, seconds));
-    }
-
-    private void updateInformationUIFinished() {
-        textViewInfo.setText(String.format("Currently captured %d photos of all %d\nEvery photo is captured every %.1f seconds\nEstimated remaining time: %d minutes %02d seconds",
-                timelapseSessionConfig.framesAmount, timelapseSessionConfig.framesAmount, frequency, 0, 0));
-
-        progressBar.setProgress(progressBar.getMax());
-    }
-
-    private void updateProgressBar(int currentCaptured) {
-        progressBar.setProgress(currentCaptured);
-    }
-
-    private void getServiceDataAndUpdate() {
-        lastCapturedAmount = mCameraService.getCapturedPhotos();
-
-        updateInformationUI(mCameraService.getCapturedPhotos(), mCameraService.getAFAverageTime());
-        updateProgressBar(lastCapturedAmount);
+        progressBar.setProgress(receiveCapturedPhotosAmount);
     }
 
     private ServiceConnection mConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-//            Util.logEx("lifecycle", "CapturingActivity BINDING SUCCESS");
             CameraService.LocalBinder binder = (CameraService.LocalBinder) service;
             mCameraService = binder.getService();
             mCameraServiceBound = true;
-
-            if(needRefreshUIAfterCrash) {
-                needRefreshUIAfterCrash = false;
-                getServiceDataAndUpdate();
-            }
         }
 
         @Override
@@ -189,18 +140,14 @@ public class CapturingActivity extends AppCompatActivity {
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String msg = intent.getStringExtra(CameraService.BROADCAST_MSG);
+            String msg = intent.getStringExtra(CameraService.BROADCAST_MESSAGE);
             if(msg != null) {
-//                Util.log("[CapturingActivity::onReceive] msg=%s", msg);
                 if(msg.equals(CameraService.BROADCAST_MSG_CAPTURED_PHOTO)) {
-//                    lastCapturedAmount = intent.getIntExtra(Util.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1);
-                    if(mCameraServiceBound) {
-                        serviceMadeAtLeastOnePhoto = true;
-                        getServiceDataAndUpdate();
-                    }
+                    receiveCapturedPhotosAmount = intent.getIntExtra(CameraService.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1);
+                    receiveCapturePhotoAverageDurationSeconds = intent.getFloatExtra(CameraService.BROADCAST_MSG_CAPTURED_PHOTO_DURATION_MS, 500f) / 1000f;
+                    updateInformationUI();
                 } else if(msg.equals(CameraService.BROADCAST_MSG_FINISH)) {
                     Toast.makeText(CapturingActivity.this, "Capturing photos has been finished", Toast.LENGTH_LONG).show();
-                    updateInformationUIFinished();
                 }
             }
         }
@@ -210,14 +157,15 @@ public class CapturingActivity extends AppCompatActivity {
     protected void onResume() {
 //        Util.logEx("lifecycle", "CapturingActivity::onResume()");
 
-        // Service had been making photos > CapturingActivity destroyed > Service has finished work, stop > CapturingActivity creates and resumes now:
-        if(serviceMadeAtLeastOnePhoto && !Util.isMyServiceRunning(this, CameraService.class)) {
-            Toast.makeText(CapturingActivity.this, "Capturing photos has been finished", Toast.LENGTH_LONG).show();
-            updateInformationUIFinished();
-        }
+//        if(serviceMadeAtLeastOnePhoto && !Util.isMyServiceRunning(this, CameraService.class)) {
+//            Toast.makeText(CapturingActivity.this, "Capturing photos has been finished", Toast.LENGTH_LONG).show();
+//            updateInformationUIFinished();
+//        }
+//
+//        if(mCameraServiceBound)
+//            getServiceDataAndUpdate();
 
-        if(mCameraServiceBound)
-            getServiceDataAndUpdate();
+        Toast.makeText(this, "Please wait to get updated values", Toast.LENGTH_LONG).show();
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(CameraService.BROADCAST_FILTER));
         super.onResume();

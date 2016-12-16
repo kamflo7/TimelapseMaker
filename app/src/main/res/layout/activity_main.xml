@@ -18,15 +18,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="FPS:"/>
+            android:text="Photos amount:"/>
         <EditText
             android:paddingLeft="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:inputType="numberSigned"
             android:ems="10"
-            android:id="@+id/editTextFps"
-            android:text="1"
+            android:id="@+id/editTextPhotosAmount"
+            android:text="200"
             android:layout_marginLeft="5dp"
             android:textSize="16sp" />
     </LinearLayout>
@@ -38,15 +38,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Output Time (seconds):"/>
+            android:text="Frequency capturing (sec):"/>
         <EditText
             android:paddingLeft="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:inputType="numberSigned"
             android:ems="10"
-            android:id="@+id/editTextOutputTime"
-            android:text="12"
+            android:id="@+id/editTextFrequencySeconds"
+            android:text="2"
             android:layout_marginLeft="5dp"
             android:textSize="16sp" />
     </LinearLayout>
@@ -58,35 +58,15 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Input Time (minutes):"/>
+            android:text="Target output time (sec):"/>
         <EditText
             android:paddingLeft="10dp"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:inputType="numberSigned"
             android:ems="10"
-            android:id="@+id/editTextInputTime"
-            android:text="1"
-            android:layout_marginLeft="5dp"
-            android:textSize="16sp" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal">
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="File naming start index:"/>
-        <EditText
-            android:paddingLeft="10dp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:inputType="numberSigned"
-            android:ems="10"
-            android:id="@+id/editTextFileNaming"
-            android:text="0"
+            android:id="@+id/editTextOutputSeconds"
+            android:text="20"
             android:layout_marginLeft="5dp"
             android:textSize="16sp" />
     </LinearLayout>

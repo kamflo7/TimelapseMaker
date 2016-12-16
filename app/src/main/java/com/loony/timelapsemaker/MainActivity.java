@@ -1,12 +1,7 @@
 package com.loony.timelapsemaker;
 
 import android.Manifest;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 //import android.hardware.camera2.CameraAccessException;
 //import android.hardware.camera2.CameraCaptureSession;
@@ -28,34 +23,27 @@ import android.content.pm.PackageManager;
 //import java.io.IOException;
 //import java.nio.ByteBuffer;
 //import java.util.ArrayList;
-import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.support.v4.content.PermissionChecker;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.KeyEvent;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.loony.timelapsemaker.http_server.MyServerExample;
-
-import java.io.IOException;
-import java.util.Arrays;
+import com.loony.timelapsemaker.camera.TimelapseConfig;
 
 public class MainActivity extends AppCompatActivity {
-
+    public static final String PARCEL_TIMELAPSE_CONFIG = "timelapseSessionConfigParcel";
     private static final int REQUEST_PERMISSIONS = 0x1;
 
-    private String[] permissionsNedded = {
+    public static String[] NECESSARY_PERMISSIONS = {
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
             Manifest.permission.READ_EXTERNAL_STORAGE,
@@ -63,35 +51,10 @@ public class MainActivity extends AppCompatActivity {
             Manifest.permission.INTERNET,
             Manifest.permission.WAKE_LOCK
     };
-    private boolean permissionsGranted;
 
-    private EditText editTextFps, editTextOutputTime, editTextInputTime, editTextFileNaming;
+    private EditText editTextPhotosAmount, editTextFrequencySeconds, editTextOutputSeconds;
     private TextView textViewResult;
-    private TimelapseSessionConfig timelapseSessionConfig = new TimelapseSessionConfig();
-
-
-    private MyCamera cam;
-
-    public void testCapture(View v) {
-        cam = new MyCamera(this, new MyCamera.CameraStateChange() {
-            @Override
-            public void onCameraOpen() {
-//                cam.makePhoto(0, new MyCamera.OnPhotoCreatedListener() {
-//                    @Override
-//                    public void onCreated() {
-//                        cam.forceStopCameraDevice();
-//                    }
-//
-//                    @Override
-//                    public void onFailed() {
-//                        cam.forceStopCameraDevice();
-//                    }
-//                });
-                cam.testMakePhoto();
-            }
-        });
-
-    }
+    private TimelapseConfig timelapseConfig = new TimelapseConfig();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,11 +62,14 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         initUI();
 
-        Util.logEx("lifecycle", "MainActivity::onCreate(Bundle %s); var permissionsGranted=%s", savedInstanceState != null ? "exists" : "doesn't exist", Boolean.toString(permissionsGranted));
+        Util.logEx("lifecycle", "MainActivity::onCreate(Bundle %s);", savedInstanceState != null ? "exists" : "doesn't exist");
 
-        if(savedInstanceState == null)
-            if(!checkPermissions())
-                makePermissions();
+        if(savedInstanceState == null && !Util.checkPermissions(NECESSARY_PERMISSIONS, this))
+            makePermissions(NECESSARY_PERMISSIONS);
+    }
+
+    public void testCapture(View v) { // for test
+
     }
 
     private void initUI() {
@@ -121,29 +87,26 @@ public class MainActivity extends AppCompatActivity {
             }
         };
 
-        editTextFps = (EditText) findViewById(R.id.editTextFps);
-        editTextOutputTime = (EditText) findViewById(R.id.editTextOutputTime);
-        editTextInputTime = (EditText) findViewById(R.id.editTextInputTime);
-        editTextFileNaming = (EditText) findViewById(R.id.editTextFileNaming);
+        editTextPhotosAmount = (EditText) findViewById(R.id.editTextPhotosAmount);
+        editTextFrequencySeconds = (EditText) findViewById(R.id.editTextFrequencySeconds);
+        editTextOutputSeconds = (EditText) findViewById(R.id.editTextOutputSeconds);
         textViewResult = (TextView) findViewById(R.id.textViewResult);
         findViewById(R.id.btnStartCapture).setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(!permissionsGranted) {
-                    Toast.makeText(MainActivity.this, "You need to provide necessary permissions!", Toast.LENGTH_LONG).show();
-                    makePermissions();
+                if(!Util.checkPermissions(NECESSARY_PERMISSIONS, MainActivity.this)) {
+                    makePermissions(NECESSARY_PERMISSIONS);
                 } else {
                     Intent i = new Intent(MainActivity.this, CapturingActivity.class);
-                    i.putExtra("timelapseSessionConfigParcel", timelapseSessionConfig);
+                    i.putExtra(PARCEL_TIMELAPSE_CONFIG, timelapseConfig);
                     startActivity(i);
                 }
             }
         });
 
-        editTextFps.addTextChangedListener(listener);
-        editTextOutputTime.addTextChangedListener(listener);
-        editTextInputTime.addTextChangedListener(listener);
-        editTextFileNaming.addTextChangedListener(listener);
+        editTextPhotosAmount.addTextChangedListener(listener);
+        editTextFrequencySeconds.addTextChangedListener(listener);
+        editTextOutputSeconds.addTextChangedListener(listener);
 
         updateTimelapseSessionConfigModel();
         updateViewSessionParameters();
@@ -151,11 +114,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateTimelapseSessionConfigModel() {
         try {
-            timelapseSessionConfig.fps = Integer.parseInt(editTextFps.getText().toString());
-            timelapseSessionConfig.inputMinutes = Integer.parseInt(editTextInputTime.getText().toString());
-            timelapseSessionConfig.outputSeconds = Integer.parseInt(editTextOutputTime.getText().toString());
-            timelapseSessionConfig.photoStartIdx = Integer.parseInt(editTextFileNaming.getText().toString());
-            timelapseSessionConfig.calculate();
+            timelapseConfig.setPhotosAmount(Integer.parseInt(editTextPhotosAmount.getText().toString()));
+            timelapseConfig.setFrequencyCaptureMiliseconds(Integer.parseInt(editTextFrequencySeconds.getText().toString()) * 1000L);
         }
         catch (NumberFormatException e) {
             Toast.makeText(this, "Number format exception! :<", Toast.LENGTH_LONG).show();
@@ -163,62 +123,41 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void updateViewSessionParameters() {
-        textViewResult.setText(String.format("It will take %d frames and photo will be capturing every %.1f second",
-                timelapseSessionConfig.framesAmount, timelapseSessionConfig.captureFrequency));
-    }
-
-    private boolean checkPermissions() {
-        for(String permission : permissionsNedded) {
-            int permissionCheckResult = ContextCompat.checkSelfPermission(this, permission);
-            Util.log("Permission check for camera: " + (permissionCheckResult == PermissionChecker.PERMISSION_DENIED ? "DENIED" : "GRANTED"));
-            if(permissionCheckResult == PermissionChecker.PERMISSION_DENIED) {
-                return false;
-            }
+        int outputSeconds;
+        try {
+            outputSeconds = Integer.parseInt(editTextOutputSeconds.getText().toString());
+        } catch(NumberFormatException e) {
+            return;
         }
-        permissionsGranted = true;
-        return true;
+
+        float fps = timelapseConfig.calculator.getFps(outputSeconds);
+        int totalSecondsMin = timelapseConfig.calculator.getTotalSecondsTimeToCaptureAll(500L);
+        int totalSecondsMax = timelapseConfig.calculator.getTotalSecondsTimeToCaptureAll(1000L);
+
+        textViewResult.setText(String.format("It will take approximately from %s to %s to capture and will be %.1f fps",
+            Util.secondsToTime(totalSecondsMin), Util.secondsToTime(totalSecondsMax), fps));
     }
 
-    private void makePermissions() {
-        ActivityCompat.requestPermissions(this, permissionsNedded, REQUEST_PERMISSIONS);
+    private void makePermissions(String[] permissions) {
+        ActivityCompat.requestPermissions(this, permissions, REQUEST_PERMISSIONS);
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         if(requestCode == REQUEST_PERMISSIONS) {
             if(grantResults.length > 0) {
-                permissionsGranted = true;
-                for(int grantResult : grantResults)
-                    if(grantResult != PackageManager.PERMISSION_GRANTED)
-                        permissionsGranted = false;
-
-                Util.log("You've got permissions!");
+                for(int grantResult : grantResults) {
+                    if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(this, "You have to provide permissions to use app.", Toast.LENGTH_LONG).show();
+                    }
+                }
             }
         }
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-//        try {
-//            server = new MyServerExample(this); //httpd
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-//        if(server != null) {
-//            server.stop(); //httpd
-//        }
-    }
-
-    @Override
     protected void onStop() {
         super.onStop();
-
         Util.logEx("lifecycle", "MainActivity::onStop");
     }
 

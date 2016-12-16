@@ -53,7 +53,7 @@
 								$("#batteryProgressVal").css("width", ((json.battery_level / 100) * 150) + "px");
 								$("#batteryTxtVal").html(json.battery_level + "%");
 								$("#captured").html("Captured "+json.captured_photos+"/"+json.total_photos+" photos");
-								$("#frequency").html("Each image is captured every "+json.frequency+" sec (+3sec autofocus)");
+								$("#frequency").html("Each image is captured every "+json.frequency+" sec (+"+json.capture_duration_avg_sec+"sec autofocus)");
 								
 								var sec = json.estimated_time;
 								var minutes = Math.floor(sec/60);

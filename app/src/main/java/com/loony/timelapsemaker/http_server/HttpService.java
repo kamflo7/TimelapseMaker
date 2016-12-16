@@ -10,11 +10,10 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.support.v4.content.LocalBroadcastManager;
-import android.widget.Toast;
 
-import com.loony.timelapsemaker.CameraService;
-import com.loony.timelapsemaker.CapturingActivity;
-import com.loony.timelapsemaker.TimelapseSessionConfig;
+import com.loony.timelapsemaker.MainActivity;
+import com.loony.timelapsemaker.camera.CameraService;
+import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.Util;
 
 import java.io.IOException;
@@ -23,7 +22,7 @@ public class HttpService extends Service {
 
     private final IBinder mBinder = new HttpService.LocalBinder();
     private MyServerExample server;
-    private TimelapseSessionConfig timelapseSessionConfig;
+    private TimelapseConfig timelapseSessionConfig;
 
     public HttpService() {
     }
@@ -36,7 +35,7 @@ public class HttpService extends Service {
             return START_NOT_STICKY;
         }
 
-        timelapseSessionConfig = intent.getExtras().getParcelable("timelapseSessionConfigParcel");
+        timelapseSessionConfig = intent.getExtras().getParcelable(MainActivity.PARCEL_TIMELAPSE_CONFIG);
 
         try {
             server = new MyServerExample(getApplicationContext(), timelapseSessionConfig);
@@ -63,14 +62,11 @@ public class HttpService extends Service {
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            String msg = intent.getStringExtra(CameraService.BROADCAST_MSG);
+            String msg = intent.getStringExtra(CameraService.BROADCAST_MESSAGE);
             if(msg != null) {
-                Util.log("[CapturingActivity::onReceive] msg=%s", msg);
                 if(msg.equals(CameraService.BROADCAST_MSG_CAPTURED_PHOTO)) {
-                    int lastCapturedAmount = intent.getIntExtra(CameraService.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1);
-                    long avgAFtime = intent.getLongExtra(CameraService.BROADCAST_MSG_AF_AVG_TIME, CameraService.DEFAULT_AVERAGE_AF_TIME);
-                    HttpService.this.server.setCapturedPhotoAmount(lastCapturedAmount);
-                    HttpService.this.server.setAFAverageTime(avgAFtime);
+                    server.setReceiveCapturedPhotosAmount(intent.getIntExtra(CameraService.BROADCAST_MSG_CAPTURED_PHOTO_AMOUNT, -1));
+                    server.setReceiveCapturePhotoAverageDurationSeconds(intent.getFloatExtra(CameraService.BROADCAST_MSG_CAPTURED_PHOTO_DURATION_MS, 500f) / 1000f);
                 }
             }
         }

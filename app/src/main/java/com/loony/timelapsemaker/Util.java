@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
+import android.support.v4.content.ContextCompat;
+import android.support.v4.content.PermissionChecker;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -104,10 +106,20 @@ public class Util {
         return ((float)level / (float)scale) * 100.0f;
     }
 
-    public static int calcRemainingTimeAsSeconds(long afAverageTime, int lastCapturedAmount, int totalFramesAmount, float frequencyCapture) {
-        int differenceFrames = totalFramesAmount - lastCapturedAmount;
-        int afAvgSec = (int) afAverageTime / 1000;
-        int res = (int) Math.ceil(differenceFrames * (frequencyCapture + afAvgSec) - afAvgSec);
-        return res < 0 ? 0 : res;
+    public static String secondsToTime(int seconds) {
+        int minutes = seconds / 60;
+        int newSeconds = seconds % 60;
+
+        return String.format("%02dm:%02ds", minutes, newSeconds);
+    }
+
+    public static boolean checkPermissions(String[] permissions, Context context) {
+        for(String permission : permissions) {
+            int permissionCheckResult = ContextCompat.checkSelfPermission(context, permission);
+            if(permissionCheckResult == PermissionChecker.PERMISSION_DENIED) {
+                return false;
+            }
+        }
+        return true;
     }
 }

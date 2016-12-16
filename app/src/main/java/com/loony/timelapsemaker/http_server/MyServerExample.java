@@ -6,8 +6,7 @@ import android.graphics.BitmapFactory;
 import android.os.Environment;
 import android.util.Base64;
 
-import com.loony.timelapsemaker.R;
-import com.loony.timelapsemaker.TimelapseSessionConfig;
+import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.Util;
 
 import org.json.JSONException;
@@ -26,7 +25,6 @@ import java.util.Map;
 import java.util.Random;
 import fi.iki.elonen.NanoHTTPD;
 import static com.loony.timelapsemaker.Util.log;
-import static com.loony.timelapsemaker.Util.mapToString;
 
 /**
  * Created by Kamil on 11/30/2016.
@@ -36,20 +34,21 @@ public class MyServerExample extends NanoHTTPD {
     private final static int PORT = 8080;
     private Context context;
 
-    private TimelapseSessionConfig config;
-    private int capturedPhotoAmount;
-    private long afAvgTime;
-    private int lastPhotoSent = -1;
+    private TimelapseConfig config;
+    private int lastAmount = -2;
 
-    public void setCapturedPhotoAmount(int amount) {
-        this.capturedPhotoAmount = amount;
+    private int receiveCapturedPhotosAmount;
+    private float receiveCapturePhotoAverageDurationSeconds;
+
+    public void setReceiveCapturedPhotosAmount(int receiveCapturedPhotosAmount) {
+        this.receiveCapturedPhotosAmount = receiveCapturedPhotosAmount;
     }
 
-    public void setAFAverageTime(long afAvgTime) {
-        this.afAvgTime = afAvgTime;
+    public void setReceiveCapturePhotoAverageDurationSeconds(float receiveCapturePhotoAverageDurationSeconds) {
+        this.receiveCapturePhotoAverageDurationSeconds = receiveCapturePhotoAverageDurationSeconds;
     }
 
-    public MyServerExample(Context context, TimelapseSessionConfig config) throws IOException {
+    public MyServerExample(Context context, TimelapseConfig config) throws IOException {
         super(PORT);
         this.context = context;
         this.config = config;
@@ -103,23 +102,25 @@ public class MyServerExample extends NanoHTTPD {
             JSONObject o = new JSONObject();
             try {
                 o.put("battery_level", Util.getBatteryLevel(context));
-                o.put("captured_photos", this.capturedPhotoAmount);
-                o.put("total_photos", config.framesAmount);
-                o.put("frequency", config.captureFrequency);
-                o.put("estimated_time", Util.calcRemainingTimeAsSeconds(afAvgTime, capturedPhotoAmount, config.framesAmount, config.captureFrequency));
+                o.put("captured_photos", receiveCapturedPhotosAmount);
+                o.put("total_photos", config.getPhotosAmount());
+                o.put("frequency", config.getFrequencyCaptureMiliseconds()/1000);
+                o.put("estimated_time", config.calculator.getTotalSecondsTimeToCaptureAll(config.getPhotosAmount()-receiveCapturedPhotosAmount, (long) receiveCapturePhotoAverageDurationSeconds*1000L));
+                o.put("capture_duration_avg_sec", receiveCapturePhotoAverageDurationSeconds);
 
-                int photoToSend = capturedPhotoAmount - 1;
+                int photoToSend = receiveCapturedPhotosAmount - 1;
 
-                if(photoToSend != lastPhotoSent) {
+                if(photoToSend != lastAmount) {
+                    Util.log("sending photo");
                     File photo = new File(Environment.getExternalStorageDirectory(), "myPhoto" + photoToSend + ".jpg");
                     if (photo.exists()) {
                         FileInputStream fis = new FileInputStream(photo);
                         Bitmap bm = BitmapFactory.decodeStream(fis);
                         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        bm.compress(Bitmap.CompressFormat.JPEG, 75, baos);
+                        bm.compress(Bitmap.CompressFormat.JPEG, 30, baos);
                         byte[] b = baos.toByteArray();
                         o.put("photo_base64", Base64.encodeToString(b, Base64.NO_WRAP));
-                        lastPhotoSent = photoToSend;
+                        lastAmount = photoToSend;
                     }
                 }
 
