@@ -1,5 +1,6 @@
 package com.loony.timelapsemaker;
 
+import android.Manifest;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -21,6 +22,16 @@ import java.util.Map;
  */
 
 public class Util {
+
+    public static String[] NECESSARY_PERMISSIONS_START_APP = {
+            Manifest.permission.CAMERA,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.WAKE_LOCK
+    };
+
     public static void log(String str, Object... params) {
         String formated = params.length == 0 ? str : String.format(str, params);
 
