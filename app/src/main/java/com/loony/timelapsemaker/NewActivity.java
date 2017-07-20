@@ -28,11 +28,12 @@ public class NewActivity extends AppCompatActivity {
 
     private Camera camera;
     private SurfaceView surfaceView;
+    private SurfaceHolder.Callback surfaceHolderCallback;
     private ImageButton btnStartTimelapse;
 
     private boolean isDoingTimelapse;
 
-    // cameraV2 service
+    // camera service
     private boolean cameraServiceBound;
     private CameraService cameraService;
     private ServiceConnection cameraConnection;
@@ -120,79 +121,11 @@ public class NewActivity extends AppCompatActivity {
         super.onResume();
         Util.log("___onResume");
 
-        /*surfaceView.getHolder().addCallback(new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                try {
-                    cameraV2 = new CameraImplV2(NewActivity.this, new OnCameraStateChangeListener() {
-                        @Override
-                        public void onCameraOpen() {
-
-                        }
-
-                        @Override
-                        public void onCameraDisconnectOrError() {
-
-                        }
-                    });
-
-                    Resolution[] sizes = cameraV2.getAvailableSizes();
-                    Resolution choosenSize = sizes[0];
-                    cameraV2.setOutputSize(choosenSize);
-                    surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
-                    cameraV2.openForPreview(surfaceView.getHolder().getSurface());
-
-                } catch (CameraAccessException e) {
-                    e.printStackTrace();
-                }
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-
-            }
-        });*/
-
-        //todo: test
-        //surfaceView.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        /*if(callback != null) {
-            surfaceView.getHolder().removeCallback(callback);
+        if(surfaceHolderCallback != null) {
+            surfaceView.getHolder().removeCallback(surfaceHolderCallback);
         }
 
-        callback = new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                try {
-                    cameraV1 = new CameraImplV1();
-                    cameraV1.openForPreview(surfaceHolder);
-                } catch (CameraNotAvailableException e) {
-                    e.printStackTrace();
-                }
-
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-
-            }
-        };
-        surfaceView.getHolder().addCallback(callback);*/
-
-        if(callback != null) {
-            surfaceView.getHolder().removeCallback(callback);
-        }
-
-        callback = new SurfaceHolder.Callback() {
+        surfaceHolderCallback = new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
                 camera = Util.getAppropriateCamera();
@@ -209,59 +142,30 @@ public class NewActivity extends AppCompatActivity {
                         }
                     });
 
-                    /*
-                    Resolution[] sizes = cameraV2.getAvailableSizes();
-                    Resolution choosenSize = sizes[0];
-                    cameraV2.setOutputSize(choosenSize);
-                    surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
-                    cameraV2.openForPreview(surfaceView.getHolder().getSurface());
-                    */
-
                     Resolution[] sizes = camera.getSupportedPictureSizes();
                     Resolution choosenSize = sizes[0];
                     camera.setOutputSize(choosenSize);
                     surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
                     camera.openForPreview(surfaceView.getHolder());
-
-
-                    //cameraV1.openForPreview(surfaceHolder);
                 } catch (CameraNotAvailableException e) {
                     e.printStackTrace();
                 }
             }
 
             @Override
-            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-
-            }
+            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) { }
 
             @Override
-            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-
-            }
+            public void surfaceDestroyed(SurfaceHolder surfaceHolder) { }
         };
 
-        surfaceView.getHolder().addCallback(callback);
+        surfaceView.getHolder().addCallback(surfaceHolderCallback);
     }
-
-    //private CameraImplV1 cameraV1; // todo: test
-    private SurfaceHolder.Callback callback; //todo: test
 
     @Override
     protected void onPause() {
         super.onPause();
         Util.log("___onPause");
-
-        /*if(cameraV2 != null) {
-            cameraV2.close();
-            cameraV2 = null;
-        }
-
-        if(cameraV1 != null) {
-
-            cameraV1.close();
-            cameraV1 = null;
-        }*/
 
         if(camera != null) {
             camera.close();

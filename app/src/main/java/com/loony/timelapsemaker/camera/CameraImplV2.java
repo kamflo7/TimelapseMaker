@@ -97,9 +97,8 @@ public class CameraImplV2 implements Camera {
     public CameraImplV2() {}
 
     @Override
-    public void prepare(Context context, OnCameraStateChangeListener onCameraStateChangeListener) throws CameraNotAvailableException {
+    public void prepare(Context context) throws CameraNotAvailableException {
         this.context = context;
-        this.onCameraStateChangeListener = onCameraStateChangeListener;
         this.cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 
         if (!findBackCamera())
@@ -118,7 +117,7 @@ public class CameraImplV2 implements Camera {
         dummySurface = new SurfaceTexture(10);
         dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
         //previewSurface = new Surface(dummySurface);
-        previewSurface = surfaceHolder.getSurface(); // todo: testing surface from outside
+        previewSurface = surfaceHolder.getSurface();
         startBackgroundThread();
 
         imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
@@ -162,6 +161,11 @@ public class CameraImplV2 implements Camera {
         } catch(CameraAccessException | SecurityException e) {
             throw new CameraNotAvailableException();
         }
+    }
+
+    public void openForCapturing(OnCameraStateChangeListener onCameraStateChangeListener) {
+        this.onCameraStateChangeListener = onCameraStateChangeListener;
+        //todo: do it
     }
 
     private void createCameraPreviewSession() throws CameraAccessException {
