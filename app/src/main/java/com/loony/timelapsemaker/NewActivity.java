@@ -38,6 +38,8 @@ public class NewActivity extends AppCompatActivity {
     private CameraService cameraService;
     private ServiceConnection cameraConnection;
 
+    private Resolution pictureSize;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,6 +63,7 @@ public class NewActivity extends AppCompatActivity {
             TimelapseConfig config = new TimelapseConfig();
             config.setPhotosLimit(20);
             config.setMilisecondsInterval(3000L);
+            config.setPictureSize(pictureSize);
 
             intentCamera.putExtra(PARCEL_TIMELAPSE_CONFIG, config);
             startService(intentCamera);
@@ -130,20 +133,10 @@ public class NewActivity extends AppCompatActivity {
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
                 camera = Util.getAppropriateCamera();
                 try {
-                    camera.prepare(NewActivity.this, new OnCameraStateChangeListener() {
-                        @Override
-                        public void onCameraOpen() {
-
-                        }
-
-                        @Override
-                        public void onCameraDisconnectOrError() {
-
-                        }
-                    });
-
+                    camera.prepare(NewActivity.this);
                     Resolution[] sizes = camera.getSupportedPictureSizes();
                     Resolution choosenSize = sizes[0];
+                    pictureSize = choosenSize;
                     camera.setOutputSize(choosenSize);
                     surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
                     camera.openForPreview(surfaceView.getHolder());

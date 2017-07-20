@@ -9,6 +9,7 @@ import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CameraMetadata;
 import android.hardware.camera2.CaptureFailure;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.CaptureResult;
@@ -17,6 +18,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Build;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
@@ -27,7 +29,12 @@ import android.view.SurfaceHolder;
 import com.loony.timelapsemaker.Util;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created by Kamil on 7/19/2017.
@@ -69,6 +76,7 @@ public class CameraImplV2 implements Camera {
     private CaptureRequest previewRequest;
 
     // then, CameraCaptureSession.CaptureCallback
+    private OnPhotoCaptureListener onPhotoCaptureListener;
     private int captureState;
 
     private HandlerThread backgroundThread;
@@ -120,7 +128,7 @@ public class CameraImplV2 implements Camera {
         previewSurface = surfaceHolder.getSurface();
         startBackgroundThread();
 
-        imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
+        /*imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
             @Override
             public void onImageAvailable(ImageReader imageReader) {
@@ -128,7 +136,7 @@ public class CameraImplV2 implements Camera {
                 image.close();
                 Util.log("OnImageAvailableListener called");
             }
-        }, null);
+        }, null);*/
 
         try {
             cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
@@ -163,17 +171,111 @@ public class CameraImplV2 implements Camera {
         }
     }
 
-    public void openForCapturing(OnCameraStateChangeListener onCameraStateChangeListener) {
+    public void openForCapturing(OnCameraStateChangeListener onCameraStateChangeListener, final OnPhotoCaptureListener onPhotoCaptureListener) throws CameraNotAvailableException {
         this.onCameraStateChangeListener = onCameraStateChangeListener;
-        //todo: do it
+        this.onPhotoCaptureListener = onPhotoCaptureListener;
+
+        if(outputSize == null) // should be another name for this exception, but this is small simple project, so who cares
+            throw new CameraNotAvailableException("Output size is not defined");
+
+        dummySurface = new SurfaceTexture(10);
+        dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
+        previewSurface = new Surface(dummySurface);
+        startBackgroundThread();
+
+        imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
+        imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
+            // todo: edit to call listener and pass byte[] buffer of image to make this compatible with different versions of android
+            @Override
+            public void onImageAvailable(ImageReader imageReader) {
+                Image image = imageReader.acquireLatestImage();
+                saveImageToDisk(image);
+                image.close();
+                onPhotoCaptureListener.onCreate(new byte[10]);
+                Util.log("OnImageAvailableListener called");
+            }
+        }, null);
+
+        try {
+            cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
+                @Override
+                public void onOpened(@NonNull CameraDevice cameraDevice) {
+                    CameraImplV2.this.cameraDevice = cameraDevice;
+
+                    try {
+                        createCameraPreviewSession(false);
+                    } catch (CameraAccessException e) {
+                        close();
+                        CameraImplV2.this.onCameraStateChangeListener.onCameraDisconnectOrError();
+                    }
+                }
+
+                @Override
+                public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+                    cameraDevice.close();
+                    CameraImplV2.this.cameraDevice = null;
+                    CameraImplV2.this.onCameraStateChangeListener.onCameraDisconnectOrError();
+                }
+
+                @Override
+                public void onError(@NonNull CameraDevice cameraDevice, int i) {
+                    cameraDevice.close();
+                    CameraImplV2.this.cameraDevice = null;
+                    CameraImplV2.this.onCameraStateChangeListener.onCameraDisconnectOrError();
+                }
+            }, null);
+        } catch(CameraAccessException | SecurityException e) {
+            throw new CameraNotAvailableException();
+        }
+    }
+
+    private int photoNumberTest;
+
+    private void saveImageToDisk(Image image) { // todo: temporary
+        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+
+        File photo = new File(Environment.getExternalStorageDirectory(), "myPhoto"+(photoNumberTest++)+".jpg");
+
+        if(photo.exists())
+            photo.delete();
+
+        try {
+            FileOutputStream fos = new FileOutputStream(photo.getPath());
+
+            fos.write(bytes);
+            fos.close();
+
+            Util.log("Saved image to %s", photo.getPath());
+        } catch(IOException e) {
+            Util.log("Problem with saving image " + e.getMessage());
+        }
+    }
+
+    @Override
+    public void capturePhoto() {
+        try {
+            previewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
+            captureState = STATE_WAITING_LOCK;
+            captureSession.capture(previewRequestBuilder.build(), captureCallback, backgroundHandler);
+        } catch(CameraAccessException e) {
+            close();
+            onCameraStateChangeListener.onCameraDisconnectOrError();
+        }
     }
 
     private void createCameraPreviewSession() throws CameraAccessException {
+        createCameraPreviewSession(true);
+    }
+
+    private void createCameraPreviewSession(boolean preview) throws CameraAccessException {
         previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
         previewRequestBuilder.addTarget(previewSurface);
         setCameraOrientation(previewRequestBuilder);
 
-        cameraDevice.createCaptureSession(Arrays.asList(previewSurface, imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
+        List<Surface> surfaceList = preview ? Arrays.asList(previewSurface) : Arrays.asList(previewSurface, imageReader.getSurface());
+        cameraDevice.createCaptureSession(surfaceList, new CameraCaptureSession.StateCallback() {
             @Override
             public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
                 CameraImplV2.this.captureSession = cameraCaptureSession;
@@ -183,10 +285,12 @@ public class CameraImplV2 implements Camera {
                 //startedRepeatedRequest = false;
                 try {
                     captureSession.setRepeatingRequest(previewRequest, captureCallback, backgroundHandler);
-                    onCameraStateChangeListener.onCameraOpen(); // todo: Not sure whether this is a best place
+                    if(onCameraStateChangeListener != null)
+                        onCameraStateChangeListener.onCameraOpen(); // todo: Not sure whether this is a best place
                 } catch (CameraAccessException e) {
                     close();
-                    onCameraStateChangeListener.onCameraDisconnectOrError();
+                    if(onCameraStateChangeListener != null)
+                        onCameraStateChangeListener.onCameraDisconnectOrError();
                 }
             }
 
@@ -210,15 +314,40 @@ public class CameraImplV2 implements Camera {
                     break;
                 }
                 case STATE_WAITING_LOCK: {
+                    Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
+                    Float lensDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE);
 
+                    //if(lensDistance != null) lastLens = lensDistance.floatValue();
+                    //waitingLockCount++;
+
+                    if (afState == null) {
+                        captureStillPicture();
+                    } else if (CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED == afState || CaptureResult.CONTROL_AF_STATE_NOT_FOCUSED_LOCKED == afState) {
+                        Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE); // CONTROL_AE_STATE can be null on some devices
+                        if (aeState == null || aeState == CaptureResult.CONTROL_AE_STATE_CONVERGED) {
+                            captureState = STATE_PICTURE_TAKEN;
+                            captureStillPicture();
+                        } else {
+                            runPrecaptureSequence();
+                        }
+                    }
                     break;
                 }
                 case STATE_WAITING_PRECAPTURE: {
-
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE); // CONTROL_AE_STATE can be null on some devices
+                    if (aeState == null ||
+                            aeState == CaptureResult.CONTROL_AE_STATE_PRECAPTURE ||
+                            aeState == CaptureRequest.CONTROL_AE_STATE_FLASH_REQUIRED) {
+                        captureState = STATE_WAITING_NON_PRECAPTURE;
+                    }
                     break;
                 }
                 case STATE_WAITING_NON_PRECAPTURE: {
-
+                    Integer aeState = result.get(CaptureResult.CONTROL_AE_STATE); // CONTROL_AE_STATE can be null on some devices
+                    if (aeState == null || aeState != CaptureResult.CONTROL_AE_STATE_PRECAPTURE) {
+                        captureState = STATE_PICTURE_TAKEN;
+                        captureStillPicture();
+                    }
                     break;
                 }
             }
@@ -257,6 +386,51 @@ public class CameraImplV2 implements Camera {
             super.onCaptureStarted(session, request, timestamp, frameNumber);
         }
     };
+
+    private void captureStillPicture() throws CameraAccessException {
+        final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
+
+        Surface surfaceTarget = imageReader.getSurface();
+        captureBuilder.addTarget(surfaceTarget);
+        captureBuilder.set(CaptureRequest.JPEG_QUALITY, (byte) 90);
+        setCameraOrientation(captureBuilder);
+        captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);// Use the same AE and AF modes as the preview.
+
+        CameraCaptureSession.CaptureCallback CaptureCallback = new CameraCaptureSession.CaptureCallback() {
+            @Override
+            public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
+                previewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_CANCEL);
+                try {
+                    captureSession.capture(previewRequestBuilder.build(), captureCallback, null);
+                } catch (CameraAccessException e) {
+                    close();
+                    onCameraStateChangeListener.onCameraDisconnectOrError();
+                    return;
+                }
+
+                captureState = STATE_PREVIEW;
+            }
+
+            @Override
+            public void onCaptureFailed(CameraCaptureSession session, CaptureRequest request, CaptureFailure failure) {
+                Util.log("Capture failed FINAL in MyCamera[Request: %s][Failure: Frame %d; Reason: %d; SequenceID: %d; wasImgCaptured: %d]", request.toString(),
+                        failure.getFrameNumber(), failure.getReason(), failure.getSequenceId(), failure.wasImageCaptured() ? 1 : 0);
+
+                captureState = STATE_PREVIEW;
+                close();
+                onPhotoCaptureListener.onFail();
+                super.onCaptureFailed(session, request, failure);
+            }
+        };
+
+        captureSession.capture(captureBuilder.build(), CaptureCallback, null);
+    }
+
+    private void runPrecaptureSequence() throws CameraAccessException {
+        previewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START); // This is how to tell the camera to trigger.
+        captureState = STATE_WAITING_PRECAPTURE; // Tell #mCaptureCallback to wait for the precapture sequence to be set.
+        captureSession.capture(previewRequestBuilder.build(), captureCallback, null);
+    }
 
     @Override
     public void close() {

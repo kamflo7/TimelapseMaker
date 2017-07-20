@@ -17,6 +17,7 @@ import com.loony.timelapsemaker.InfinityFixedList;
 import com.loony.timelapsemaker.NewActivity;
 import com.loony.timelapsemaker.R;
 import com.loony.timelapsemaker.Util;
+import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
 /**
  * Created by Kamil on 7/19/2017.
@@ -33,6 +34,8 @@ public class CameraService extends Service {
     private final IBinder mBinder = new LocalBinder();
     private Worker worker;
 
+    private TimelapseController timelapseController;
+    private TimelapseConfig timelapseConfig;
 
     @Override
     public void onCreate() {
@@ -48,11 +51,17 @@ public class CameraService extends Service {
             return START_NOT_STICKY;
         }
 
+        timelapseConfig = intent.getExtras().getParcelable(NewActivity.PARCEL_TIMELAPSE_CONFIG);
 
         Runnable runnable = new Runnable() {
             @Override
             public void run() {
-
+                try {
+                    timelapseController = new TimelapseController(getApplicationContext(), timelapseConfig);
+                    timelapseController.start();
+                } catch (CameraNotAvailableException e) {
+                    e.printStackTrace();
+                }
             }
         };
 

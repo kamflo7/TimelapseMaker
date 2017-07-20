@@ -10,6 +10,7 @@ import android.os.Parcelable;
 public class TimelapseConfig implements Parcelable {
     private long milisecondsInterval;
     private int photosLimit;
+    private Resolution pictureSize;
 
     public TimelapseConfig() {}
 
@@ -26,6 +27,17 @@ public class TimelapseConfig implements Parcelable {
         return false;
     }
 
+    public void setPictureSize(Resolution resolution) {
+        this.pictureSize = resolution;
+    }
+
+    /*public void setPictureSize(int width, int height) {
+        setPictureSize(new Resolution(width, height));
+    }*/
+
+    public Resolution getPictureSize() {
+        return pictureSize;
+    }
 
     public long getMilisecondsInterval() {
         return this.milisecondsInterval;
@@ -46,12 +58,15 @@ public class TimelapseConfig implements Parcelable {
         this();
         milisecondsInterval = in.readLong();
         photosLimit = in.readInt();
+        pictureSize = new Resolution(in.readInt(), in.readInt());
     }
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeLong(milisecondsInterval);
         dest.writeInt(photosLimit);
+        dest.writeInt(pictureSize.getWidth());
+        dest.writeInt(pictureSize.getHeight());
     }
 
     public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {

@@ -16,6 +16,9 @@ import java.util.List;
 public class CameraImplV1 implements com.loony.timelapsemaker.camera.Camera {
     private Camera camera;
 
+    private OnCameraStateChangeListener onCameraStateChangeListener;
+    private OnPhotoCaptureListener onPhotoCaptureListener;
+
     @Override
     public void prepare(Context context) throws CameraNotAvailableException {
         camera = getCameraInstance();
@@ -33,7 +36,13 @@ public class CameraImplV1 implements com.loony.timelapsemaker.camera.Camera {
     }
 
     @Override
-    public void openForCapturing(OnCameraStateChangeListener onCameraStateChangeListener) {
+    public void openForCapturing(OnCameraStateChangeListener onCameraStateChangeListener, OnPhotoCaptureListener onPhotoCaptureListener) {
+        this.onCameraStateChangeListener = onCameraStateChangeListener;
+        this.onPhotoCaptureListener = onPhotoCaptureListener;
+    }
+
+    @Override
+    public void capturePhoto() {
 
     }
 
