@@ -1,5 +1,6 @@
 package com.loony.timelapsemaker.camera;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
@@ -15,12 +16,16 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.support.annotation.NonNull;
 import android.util.Size;
 import android.view.Surface;
+import android.view.SurfaceHolder;
+
 import com.loony.timelapsemaker.Util;
+import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
 import java.util.Arrays;
 
@@ -28,7 +33,8 @@ import java.util.Arrays;
  * Created by Kamil on 7/19/2017.
  */
 
-public class CameraV2 {
+@TargetApi(Build.VERSION_CODES.LOLLIPOP)
+public class CameraImplV2 implements Camera {
     // definitions, consts
     private static final int IMAGE_FORMAT = ImageFormat.JPEG;
 
@@ -47,7 +53,7 @@ public class CameraV2 {
     private String cameraID;
     private StreamConfigurationMap map;
     private CameraCharacteristics cameraCharacteristics;
-    private Size outputSize;
+    private Resolution outputSize;
 
     // surfaces
     private SurfaceTexture dummySurface;
@@ -88,25 +94,31 @@ public class CameraV2 {
         }
     }
 
-    public CameraV2(Context context, OnCameraStateChangeListener onCameraStateChangeListener) throws CameraAccessException {
+    public CameraImplV2() {}
+
+    @Override
+    public void prepare(Context context, OnCameraStateChangeListener onCameraStateChangeListener) throws CameraNotAvailableException {
         this.context = context;
         this.onCameraStateChangeListener = onCameraStateChangeListener;
         this.cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
 
         if (!findBackCamera())
-            throw new CameraAccessException(CameraAccessException.CAMERA_DISABLED, "CameraV2 not found");
+            throw new CameraNotAvailableException("Back camera not found");
 
         map = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
         if (!checkForFormatExistence(IMAGE_FORMAT, map.getOutputFormats()))
-            throw new CameraAccessException(CameraAccessException.CAMERA_DISABLED, "Image format not found");
-        outputSize = map.getOutputSizes(IMAGE_FORMAT)[0];
+            throw new CameraNotAvailableException("Image format not found");
     }
 
-    public void openForPreview(Surface surface) throws SecurityException, CameraAccessException {
+    @Override
+    public void openForPreview(SurfaceHolder surfaceHolder) throws CameraNotAvailableException {
+        if(outputSize == null) // should be another name for this exception, but this is small simple project, so who cares
+            throw new CameraNotAvailableException("Output size is not defined");
+
         dummySurface = new SurfaceTexture(10);
         dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
         //previewSurface = new Surface(dummySurface);
-        previewSurface = surface; // todo: testing surface from outside
+        previewSurface = surfaceHolder.getSurface(); // todo: testing surface from outside
         startBackgroundThread();
 
         imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
@@ -119,33 +131,37 @@ public class CameraV2 {
             }
         }, null);
 
-        cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
-            @Override
-            public void onOpened(@NonNull CameraDevice cameraDevice) {
-                CameraV2.this.cameraDevice = cameraDevice;
+        try {
+            cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
+                @Override
+                public void onOpened(@NonNull CameraDevice cameraDevice) {
+                    CameraImplV2.this.cameraDevice = cameraDevice;
 
-                try {
-                    createCameraPreviewSession();
-                } catch (CameraAccessException e) {
-                    close();
+                    try {
+                        createCameraPreviewSession();
+                    } catch (CameraAccessException e) {
+                        close();
+                        onCameraStateChangeListener.onCameraDisconnectOrError();
+                    }
+                }
+
+                @Override
+                public void onDisconnected(@NonNull CameraDevice cameraDevice) {
+                    cameraDevice.close();
+                    CameraImplV2.this.cameraDevice = null;
                     onCameraStateChangeListener.onCameraDisconnectOrError();
                 }
-            }
 
-            @Override
-            public void onDisconnected(@NonNull CameraDevice cameraDevice) {
-                cameraDevice.close();
-                CameraV2.this.cameraDevice = null;
-                onCameraStateChangeListener.onCameraDisconnectOrError();
-            }
-
-            @Override
-            public void onError(@NonNull CameraDevice cameraDevice, int i) {
-                cameraDevice.close();
-                CameraV2.this.cameraDevice = null;
-                onCameraStateChangeListener.onCameraDisconnectOrError();
-            }
-        }, null);
+                @Override
+                public void onError(@NonNull CameraDevice cameraDevice, int i) {
+                    cameraDevice.close();
+                    CameraImplV2.this.cameraDevice = null;
+                    onCameraStateChangeListener.onCameraDisconnectOrError();
+                }
+            }, null);
+        } catch(CameraAccessException | SecurityException e) {
+            throw new CameraNotAvailableException();
+        }
     }
 
     private void createCameraPreviewSession() throws CameraAccessException {
@@ -156,7 +172,7 @@ public class CameraV2 {
         cameraDevice.createCaptureSession(Arrays.asList(previewSurface, imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
             @Override
             public void onConfigured(@NonNull CameraCaptureSession cameraCaptureSession) {
-                CameraV2.this.captureSession = cameraCaptureSession;
+                CameraImplV2.this.captureSession = cameraCaptureSession;
                 previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                 previewRequest = previewRequestBuilder.build();
 
@@ -238,6 +254,7 @@ public class CameraV2 {
         }
     };
 
+    @Override
     public void close() {
         if(cameraDevice != null)
             cameraDevice.close();
@@ -249,14 +266,18 @@ public class CameraV2 {
         builder.set(CaptureRequest.JPEG_ORIENTATION, 0);
     }
 
-    private boolean findBackCamera() throws CameraAccessException {
-        for(String camera : cameraManager.getCameraIdList()) {
-            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(camera);
-            if(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) {
-                cameraID = camera;
-                cameraCharacteristics = characteristics;
-                return true;
+    private boolean findBackCamera() throws CameraNotAvailableException {
+        try {
+            for(String camera : cameraManager.getCameraIdList()) {
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(camera);
+                if(characteristics.get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK) {
+                    cameraID = camera;
+                    cameraCharacteristics = characteristics;
+                    return true;
+                }
             }
+        } catch (CameraAccessException e) {
+            throw new CameraNotAvailableException();
         }
         return false;
     }
@@ -269,15 +290,19 @@ public class CameraV2 {
         return false;
     }
 
-    public Size getSurfaceSize() {
-        return this.outputSize;
+    @Override
+    public Resolution[] getSupportedPictureSizes() {
+        Size[] sizesSrc = map.getOutputSizes(IMAGE_FORMAT);
+        Resolution[] resolutions = new Resolution[sizesSrc.length];
+
+        for(int i=0; i<sizesSrc.length; i++)
+            resolutions[i] = new Resolution(sizesSrc[i].getWidth(), sizesSrc[i].getHeight());
+
+        return resolutions;
     }
 
-    public Size[] getAvailableSizes() {
-        return map.getOutputSizes(IMAGE_FORMAT);
-    }
-
-    public void setOutputSize(Size size) {
+    @Override
+    public void setOutputSize(Resolution size) {
         this.outputSize = size;
     }
 }

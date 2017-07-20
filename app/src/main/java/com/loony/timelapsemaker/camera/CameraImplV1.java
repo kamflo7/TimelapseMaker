@@ -1,20 +1,23 @@
 package com.loony.timelapsemaker.camera;
 
+import android.content.Context;
 import android.hardware.Camera;
 import android.view.SurfaceHolder;
 
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Created by Kamil on 7/20/2017.
  */
 
-public class CameraV1 {
+public class CameraImplV1 implements com.loony.timelapsemaker.camera.Camera {
     private Camera camera;
 
-    public CameraV1() throws CameraNotAvailableException {
+    @Override
+    public void prepare(Context context, OnCameraStateChangeListener onCameraStateChangeListener) throws CameraNotAvailableException {
         camera = getCameraInstance();
         if(camera == null) throw new CameraNotAvailableException();
     }
@@ -29,6 +32,23 @@ public class CameraV1 {
         }
     }
 
+    @Override
+    public Resolution[] getSupportedPictureSizes() {
+        List<Camera.Size> list = camera.getParameters().getSupportedPictureSizes();
+
+        Resolution[] resolutions = new Resolution[list.size()];
+        for(int i=0; i<list.size(); i++)
+            resolutions[i] = new Resolution(list.get(i).width, list.get(i).height);
+
+        return resolutions;
+    }
+
+    @Override
+    public void setOutputSize(Resolution size) {
+        //todo: Need to do this ofc
+    }
+
+    @Override
     public void close() {
         if(camera != null) {
             camera.stopPreview();

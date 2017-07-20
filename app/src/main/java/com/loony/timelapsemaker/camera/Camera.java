@@ -1,6 +1,8 @@
 package com.loony.timelapsemaker.camera;
 
+import android.content.Context;
 import android.view.Surface;
+import android.view.SurfaceHolder;
 
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
@@ -10,8 +12,10 @@ import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
 public interface Camera {
 
-    void prepare() throws CameraNotAvailableException;
-    void openForPreview(Surface surface);
-
+    void prepare(Context context, OnCameraStateChangeListener onCameraStateChangeListener) throws CameraNotAvailableException;
+    void openForPreview(SurfaceHolder surfaceHolder) throws CameraNotAvailableException;
+    Resolution[] getSupportedPictureSizes();
+    void setOutputSize(Resolution size);
+    void close();
 
 }

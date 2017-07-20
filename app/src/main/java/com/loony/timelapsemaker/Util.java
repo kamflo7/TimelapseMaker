@@ -11,17 +11,29 @@ import android.support.v4.content.PermissionChecker;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.loony.timelapsemaker.camera.Camera;
+import com.loony.timelapsemaker.camera.CameraImplV1;
+import com.loony.timelapsemaker.camera.CameraImplV2;
+
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 /**
  * Created by Kamil on 11/13/2016.
  */
 
 public class Util {
+
+    public static Camera getAppropriateCamera() {
+        Random r = new Random();
+        Camera camera = r.nextBoolean() ? new CameraImplV1() : new CameraImplV2();
+        Util.log("Returned camera: " + camera.getClass().toString());
+        return camera;
+    }
 
     public static String[] NECESSARY_PERMISSIONS_START_APP = {
             Manifest.permission.CAMERA,

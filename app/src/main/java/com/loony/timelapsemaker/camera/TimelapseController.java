@@ -11,7 +11,7 @@ public class TimelapseController {
     private Context context;
     private TimelapseConfig timelapseConfig;
 
-    private CameraV2 cameraV2;
+    private CameraImplV2 cameraImplV2;
 
     private PowerManager powerManager;
     private PowerManager.WakeLock wakeLock;

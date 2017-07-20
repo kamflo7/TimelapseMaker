@@ -4,23 +4,21 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.hardware.camera2.CameraAccessException;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Size;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
-import com.loony.timelapsemaker.camera.CameraV1;
-import com.loony.timelapsemaker.camera.CameraV2;
+import com.loony.timelapsemaker.camera.Camera;
 import com.loony.timelapsemaker.camera.CameraService;
 import com.loony.timelapsemaker.camera.OnCameraStateChangeListener;
+import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
@@ -28,7 +26,7 @@ public class NewActivity extends AppCompatActivity {
     public static final int REQUEST_PERMISSIONS = 0x1;
     public static final String PARCEL_TIMELAPSE_CONFIG = "parcelTimelapseConfig";
 
-    private CameraV2 cameraV2;
+    private Camera camera;
     private SurfaceView surfaceView;
     private ImageButton btnStartTimelapse;
 
@@ -56,8 +54,8 @@ public class NewActivity extends AppCompatActivity {
         Intent intentCamera = new Intent(this, CameraService.class);
 
         if(!isDoingTimelapse) {
-            cameraV2.close();
-            cameraV2 = null;
+            camera.close();
+            camera = null;
 
             TimelapseConfig config = new TimelapseConfig();
             config.setPhotosLimit(20);
@@ -126,7 +124,7 @@ public class NewActivity extends AppCompatActivity {
             @Override
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
                 try {
-                    cameraV2 = new CameraV2(NewActivity.this, new OnCameraStateChangeListener() {
+                    cameraV2 = new CameraImplV2(NewActivity.this, new OnCameraStateChangeListener() {
                         @Override
                         public void onCameraOpen() {
 
@@ -138,8 +136,8 @@ public class NewActivity extends AppCompatActivity {
                         }
                     });
 
-                    Size[] sizes = cameraV2.getAvailableSizes();
-                    Size choosenSize = sizes[0];
+                    Resolution[] sizes = cameraV2.getAvailableSizes();
+                    Resolution choosenSize = sizes[0];
                     cameraV2.setOutputSize(choosenSize);
                     surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
                     cameraV2.openForPreview(surfaceView.getHolder().getSurface());
@@ -162,7 +160,7 @@ public class NewActivity extends AppCompatActivity {
 
         //todo: test
         //surfaceView.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
-        if(callback != null) {
+        /*if(callback != null) {
             surfaceView.getHolder().removeCallback(callback);
         }
 
@@ -170,7 +168,7 @@ public class NewActivity extends AppCompatActivity {
             @Override
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
                 try {
-                    cameraV1 = new CameraV1();
+                    cameraV1 = new CameraImplV1();
                     cameraV1.openForPreview(surfaceHolder);
                 } catch (CameraNotAvailableException e) {
                     e.printStackTrace();
@@ -188,10 +186,65 @@ public class NewActivity extends AppCompatActivity {
 
             }
         };
+        surfaceView.getHolder().addCallback(callback);*/
+
+        if(callback != null) {
+            surfaceView.getHolder().removeCallback(callback);
+        }
+
+        callback = new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                camera = Util.getAppropriateCamera();
+                try {
+                    camera.prepare(NewActivity.this, new OnCameraStateChangeListener() {
+                        @Override
+                        public void onCameraOpen() {
+
+                        }
+
+                        @Override
+                        public void onCameraDisconnectOrError() {
+
+                        }
+                    });
+
+                    /*
+                    Resolution[] sizes = cameraV2.getAvailableSizes();
+                    Resolution choosenSize = sizes[0];
+                    cameraV2.setOutputSize(choosenSize);
+                    surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
+                    cameraV2.openForPreview(surfaceView.getHolder().getSurface());
+                    */
+
+                    Resolution[] sizes = camera.getSupportedPictureSizes();
+                    Resolution choosenSize = sizes[0];
+                    camera.setOutputSize(choosenSize);
+                    surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
+                    camera.openForPreview(surfaceView.getHolder());
+
+
+                    //cameraV1.openForPreview(surfaceHolder);
+                } catch (CameraNotAvailableException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+
+            }
+        };
+
         surfaceView.getHolder().addCallback(callback);
     }
 
-    private CameraV1 cameraV1; // todo: test
+    //private CameraImplV1 cameraV1; // todo: test
     private SurfaceHolder.Callback callback; //todo: test
 
     @Override
@@ -199,7 +252,7 @@ public class NewActivity extends AppCompatActivity {
         super.onPause();
         Util.log("___onPause");
 
-        if(cameraV2 != null) {
+        /*if(cameraV2 != null) {
             cameraV2.close();
             cameraV2 = null;
         }
@@ -208,6 +261,11 @@ public class NewActivity extends AppCompatActivity {
 
             cameraV1.close();
             cameraV1 = null;
+        }*/
+
+        if(camera != null) {
+            camera.close();
+            camera = null;
         }
     }
 
