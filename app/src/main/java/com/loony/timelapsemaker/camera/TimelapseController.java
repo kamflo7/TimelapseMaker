@@ -21,6 +21,7 @@ public class TimelapseController {
     private PowerManager powerManager;
     private PowerManager.WakeLock wakeLock;
 
+    private OnTimelapseStateChangeListener onTimelapseStateChangeListener;
     private int capturedPhotos;
 
     public TimelapseController(Context context, TimelapseConfig timelapseConfig) throws CameraNotAvailableException {
@@ -31,7 +32,8 @@ public class TimelapseController {
         camera.setOutputSize(timelapseConfig.getPictureSize());
     }
 
-    public void start() throws CameraNotAvailableException {
+    public void start(OnTimelapseStateChangeListener onTimelapseStateChangeListener) throws CameraNotAvailableException {
+        this.onTimelapseStateChangeListener = onTimelapseStateChangeListener;
         powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "myWakeLockTag");
         wakeLock.acquire();
@@ -54,11 +56,32 @@ public class TimelapseController {
         @Override
         public void onCreate(byte[] img) {
             // todo: save
+            try {
+                capturedPhotos++;
+
+                if(capturedPhotos == timelapseConfig.getPhotosLimit()) {
+                    stop();
+                    onTimelapseStateChangeListener.onComplete();
+                    return;
+                } else {
+                    onTimelapseStateChangeListener.onProgress();
+                }
+
+                Thread.sleep(timelapseConfig.getMilisecondsInterval());
+
+                if(camera == null)
+                    return;
+
+                camera.capturePhoto();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override
         public void onFail() {
-
+            stop();
+            onTimelapseStateChangeListener.onFail();
         }
     };
 

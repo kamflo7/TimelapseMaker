@@ -12,6 +12,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 
 import com.loony.timelapsemaker.InfinityFixedList;
 import com.loony.timelapsemaker.NewActivity;
@@ -24,9 +25,6 @@ import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
  */
 
 public class CameraService extends Service {
-    public static final String BROADCAST_FILTER = "com.loony.timelapsemaker.camera.CameraService";
-    public static final String BROADCAST_MESSAGE = "message";
-
     private static final int NOTIFICATION_ID = 1;
     private static final int NOTIFICATION_TYPE_START = 1;
     private static final int NOTIFICATION_TYPE_CAPTURE = 2;
@@ -37,6 +35,18 @@ public class CameraService extends Service {
     private TimelapseController timelapseController;
     private TimelapseConfig timelapseConfig;
 
+    public enum TimelapseState {
+        NOT_FINISHED,
+        FINISHED_FAIL,
+        FINISHED
+    }
+
+    private TimelapseState timelapseState = TimelapseState.NOT_FINISHED;
+
+    public TimelapseState getTimelapseState() {
+        return timelapseState;
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -44,13 +54,17 @@ public class CameraService extends Service {
     }
 
     @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
+    public int onStartCommand(Intent intent, int flags, int startId) { // THREAD == MAIN
         if(intent == null) {
             Util.log("CameraService::onStartCommand is null, fatal exception; have a look at this");
             stopSelf();
             return START_NOT_STICKY;
         }
 
+        Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+
+        timelapseState = TimelapseState.NOT_FINISHED;
         timelapseConfig = intent.getExtras().getParcelable(NewActivity.PARCEL_TIMELAPSE_CONFIG);
 
         Runnable runnable = new Runnable() {
@@ -58,7 +72,28 @@ public class CameraService extends Service {
             public void run() {
                 try {
                     timelapseController = new TimelapseController(getApplicationContext(), timelapseConfig);
-                    timelapseController.start();
+                    timelapseController.start(new OnTimelapseStateChangeListener() {
+                        @Override
+                        public void onComplete() {
+                            timelapseState = TimelapseState.FINISHED;
+                            timelapseController.stop();
+                            Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED);
+                            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+                        }
+
+                        @Override
+                        public void onFail() {
+                            timelapseState = TimelapseState.FINISHED_FAIL;
+                            timelapseController.stop();
+                            Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED_FAILED);
+                            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+                        }
+
+                        @Override
+                        public void onProgress() {
+
+                        }
+                    });
                 } catch (CameraNotAvailableException e) {
                     e.printStackTrace();
                 }
@@ -69,7 +104,6 @@ public class CameraService extends Service {
         worker.start();
         worker.waitUntilReady();
         worker.handler.post(runnable);
-
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -108,9 +142,14 @@ public class CameraService extends Service {
         return mBinder;
     }
 
+    @Override
+    public boolean onUnbind(Intent intent) {
+        return super.onUnbind(intent);
+    }
+
     private Intent getSendingMessageIntent(String message) {
-        Intent intent = new Intent(BROADCAST_FILTER);
-        intent.putExtra(BROADCAST_MESSAGE, message);
+        Intent intent = new Intent(Util.BROADCAST_FILTER);
+        intent.putExtra(Util.BROADCAST_MESSAGE, message);
         return intent;
     }
 
@@ -128,8 +167,12 @@ public class CameraService extends Service {
 
     @Override
     public void onDestroy() {
+        if(timelapseController != null) {
+            timelapseController.stop();
+        }
+
         stopForeground(true);
-        worker.quit();
+        if(worker != null) worker.quit();
         super.onDestroy();
     }
 

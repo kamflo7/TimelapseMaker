@@ -124,19 +124,8 @@ public class CameraImplV2 implements Camera {
 
         dummySurface = new SurfaceTexture(10);
         dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
-        //previewSurface = new Surface(dummySurface);
         previewSurface = surfaceHolder.getSurface();
         startBackgroundThread();
-
-        /*imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
-        imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-            @Override
-            public void onImageAvailable(ImageReader imageReader) {
-                Image image = imageReader.acquireLatestImage();
-                image.close();
-                Util.log("OnImageAvailableListener called");
-            }
-        }, null);*/
 
         try {
             cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
@@ -156,14 +145,16 @@ public class CameraImplV2 implements Camera {
                 public void onDisconnected(@NonNull CameraDevice cameraDevice) {
                     cameraDevice.close();
                     CameraImplV2.this.cameraDevice = null;
-                    onCameraStateChangeListener.onCameraDisconnectOrError();
+                    CameraImplV2.this.close();
+                    if(onCameraStateChangeListener != null) onCameraStateChangeListener.onCameraDisconnectOrError();
                 }
 
                 @Override
                 public void onError(@NonNull CameraDevice cameraDevice, int i) {
                     cameraDevice.close();
                     CameraImplV2.this.cameraDevice = null;
-                    onCameraStateChangeListener.onCameraDisconnectOrError();
+                    CameraImplV2.this.close();
+                    if(onCameraStateChangeListener != null) onCameraStateChangeListener.onCameraDisconnectOrError();
                 }
             }, null);
         } catch(CameraAccessException | SecurityException e) {
@@ -284,6 +275,7 @@ public class CameraImplV2 implements Camera {
 
                 //startedRepeatedRequest = false;
                 try {
+                    //Util.log("__createCameraPreviewSession (equals?) THREAD_ID: " + Thread.currentThread().getId());
                     captureSession.setRepeatingRequest(previewRequest, captureCallback, backgroundHandler);
                     if(onCameraStateChangeListener != null)
                         onCameraStateChangeListener.onCameraOpen(); // todo: Not sure whether this is a best place
@@ -388,6 +380,7 @@ public class CameraImplV2 implements Camera {
     };
 
     private void captureStillPicture() throws CameraAccessException {
+        //Util.log("__captureStillPicture (final): another thread? THREAD_ID: " + Thread.currentThread().getId());
         final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
 
         Surface surfaceTarget = imageReader.getSurface();
