@@ -92,14 +92,15 @@ public class CameraImplV2 implements Camera {
         if(backgroundThread == null)
             return;
 
-        backgroundThread.quitSafely();
-        try {
-            backgroundThread.join();
-            backgroundThread = null;
-            backgroundHandler = null;
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
+        //backgroundThread.quitSafely();
+        backgroundThread.quit();
+
+        // here was problem in case of capturingPhotos, not previewing
+        //backgroundThread.join();
+
+        backgroundThread = null;
+        backgroundHandler = null;
+
     }
 
     public CameraImplV2() {}
@@ -137,7 +138,7 @@ public class CameraImplV2 implements Camera {
                         createCameraPreviewSession();
                     } catch (CameraAccessException e) {
                         close();
-                        onCameraStateChangeListener.onCameraDisconnectOrError();
+                        if(onCameraStateChangeListener != null) onCameraStateChangeListener.onCameraDisconnectOrError();
                     }
                 }
 
@@ -156,7 +157,7 @@ public class CameraImplV2 implements Camera {
                     CameraImplV2.this.close();
                     if(onCameraStateChangeListener != null) onCameraStateChangeListener.onCameraDisconnectOrError();
                 }
-            }, null);
+            }, backgroundHandler);
         } catch(CameraAccessException | SecurityException e) {
             throw new CameraNotAvailableException();
         }
@@ -185,9 +186,10 @@ public class CameraImplV2 implements Camera {
                 onPhotoCaptureListener.onCreate(new byte[10]);
                 Util.log("OnImageAvailableListener called");
             }
-        }, null);
+        }, backgroundHandler);
 
         try {
+            if(backgroundHandler == null || backgroundThread == null) Util.log("MAM NULLA");
             cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(@NonNull CameraDevice cameraDevice) {
@@ -214,7 +216,7 @@ public class CameraImplV2 implements Camera {
                     CameraImplV2.this.cameraDevice = null;
                     CameraImplV2.this.onCameraStateChangeListener.onCameraDisconnectOrError();
                 }
-            }, null);
+            }, backgroundHandler);
         } catch(CameraAccessException | SecurityException e) {
             throw new CameraNotAvailableException();
         }
@@ -291,7 +293,7 @@ public class CameraImplV2 implements Camera {
                 close();
                 onCameraStateChangeListener.onCameraDisconnectOrError();
             }
-        }, null);
+        }, backgroundHandler);
     }
 
     private CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
@@ -416,17 +418,21 @@ public class CameraImplV2 implements Camera {
             }
         };
 
-        captureSession.capture(captureBuilder.build(), CaptureCallback, null);
+        captureSession.capture(captureBuilder.build(), CaptureCallback, backgroundHandler);
     }
 
     private void runPrecaptureSequence() throws CameraAccessException {
         previewRequestBuilder.set(CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER, CaptureRequest.CONTROL_AE_PRECAPTURE_TRIGGER_START); // This is how to tell the camera to trigger.
         captureState = STATE_WAITING_PRECAPTURE; // Tell #mCaptureCallback to wait for the precapture sequence to be set.
-        captureSession.capture(previewRequestBuilder.build(), captureCallback, null);
+        captureSession.capture(previewRequestBuilder.build(), captureCallback, backgroundHandler);
     }
 
     @Override
     public void close() {
+
+        if(captureSession != null)
+            captureSession.close();
+
         if(cameraDevice != null)
             cameraDevice.close();
 

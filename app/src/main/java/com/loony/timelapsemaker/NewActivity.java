@@ -36,6 +36,7 @@ public class NewActivity extends AppCompatActivity {
     private ImageButton btnStartTimelapse;
 
     private boolean isDoingTimelapse;
+    //private boolean isPreviewing;
 
     // camera service
     private boolean cameraServiceBound;
@@ -71,30 +72,68 @@ public class NewActivity extends AppCompatActivity {
         }
     }
 
-    public void btnStartTimelapse(View v) {
-        Intent intentCamera = new Intent(this, CameraService.class);
+    @Override // empty
+    protected void onStart() {
+        super.onStart();
+        Util.log("___onStart");
+    }
+
+    @Override // empty
+    protected void onStop() {
+        super.onStop();
+        Util.log("___onStop");
+    }
+
+    @Override // just startPreview() in SurfaceView callback
+    protected void onResume() {
+        super.onResume();
+        Util.log("___onResume");
 
         if(!isDoingTimelapse) {
-            camera.close();
-            camera = null;
+            if (surfaceHolderCallback != null) {
+                surfaceView.getHolder().removeCallback(surfaceHolderCallback);
+            }
 
+            surfaceHolderCallback = new SurfaceHolder.Callback() {
+                @Override
+                public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                    startPreview(surfaceHolder);
+                }
+
+                @Override
+                public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+                }
+
+                @Override
+                public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+                }
+            };
+
+            surfaceView.getHolder().addCallback(surfaceHolderCallback);
+        }
+    }
+
+    @Override // just stopPreview() if previewing
+    protected void onPause() {
+        super.onPause();
+        Util.log("___onPause");
+
+        if(camera != null) {
+            stopPreview();
+        }
+    }
+
+    // just startTimelapse() or stopTimelapse() call, depending on the 'isDoingTimelapse' value
+    public void btnStartTimelapse(View v) {
+        if(!isDoingTimelapse) {
             TimelapseConfig config = new TimelapseConfig();
-            config.setPhotosLimit(20);
+            config.setPhotosLimit(2);
             config.setMilisecondsInterval(3000L);
             config.setPictureSize(pictureSize);
 
-            startCameraService(config);
-            bindToCameraService();
-
-            isDoingTimelapse = true;
-            btnStartTimelapse.setImageResource(R.drawable.stop);
-            Util.log("Started timelapse");
+            startTimelapse(config);
         } else {
-            Util.log("Trying to stop timelapse session");
-            stopService(intentCamera);
-            unbindService(cameraConnection);
-            isDoingTimelapse = false;
-            btnStartTimelapse.setImageResource(R.drawable.record);
+            stopTimelapse();
         }
     }
 
@@ -104,14 +143,61 @@ public class NewActivity extends AppCompatActivity {
             String msg = intent.getStringExtra(Util.BROADCAST_MESSAGE);
             if(msg != null) {
                 if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED)) {
-                    Util.log("Skonczyla sie praca timelapsa");
-
+                    Util.log("Timelapse work is done");
+                    stopTimelapse();
+                    startPreview(surfaceView.getHolder());
+                    Toast.makeText(NewActivity.this, "Timelapse has been done", Toast.LENGTH_LONG).show();
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
-                    Util.log("Skonczyla sie praca timelapsa - failed");
+                    Util.log("Timelapse work is done (but with fail)");
+                    stopTimelapse();
+                    startPreview(surfaceView.getHolder());
                 }
             }
         }
     };
+
+    // stopPreview(), startCameraService(), bindToCameraService(), set 'isDoingTimelapse' flag, UI: change icon
+    private void startTimelapse(TimelapseConfig timelapseConfig) {
+        stopPreview();
+        startCameraService(timelapseConfig);
+        bindToCameraService();
+
+        isDoingTimelapse = true;
+        btnStartTimelapse.setImageResource(R.drawable.stop);
+        Util.log("Started timelapse");
+    }
+
+    // stopService(), unbindService(), set 'isDoingTimelapse' flag, UI: change icon
+    private void stopTimelapse() {
+        Intent intentCamera = new Intent(this, CameraService.class);
+        stopService(intentCamera);
+        unbindService(cameraConnection);
+        isDoingTimelapse = false;
+        btnStartTimelapse.setImageResource(R.drawable.record);
+        Util.log("Trying to stop timelapse session");
+    }
+
+    private void startPreview(SurfaceHolder surfaceHolder) {
+        camera = Util.getAppropriateCamera();
+        try {
+            camera.prepare(NewActivity.this);
+            Resolution[] sizes = camera.getSupportedPictureSizes();
+            Resolution choosenSize = sizes[0];
+            pictureSize = choosenSize;
+            camera.setOutputSize(choosenSize);
+            surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
+            camera.openForPreview(surfaceView.getHolder());
+        } catch (CameraNotAvailableException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void stopPreview() {
+        try {
+            camera.close();
+            camera = null;
+        } catch(NullPointerException e) {}
+    }
 
     private void startCameraService(TimelapseConfig timelapseConfig) {
         Intent intentCamera = new Intent(this, CameraService.class);
@@ -152,69 +238,6 @@ public class NewActivity extends AppCompatActivity {
                     }
                 }
             }
-        }
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        Util.log("___onStart");
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        Util.log("___onStop");
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Util.log("___onResume");
-
-        if(!isDoingTimelapse) {
-            if (surfaceHolderCallback != null) {
-                surfaceView.getHolder().removeCallback(surfaceHolderCallback);
-            }
-
-            surfaceHolderCallback = new SurfaceHolder.Callback() {
-                @Override
-                public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                    camera = Util.getAppropriateCamera();
-                    try {
-                        camera.prepare(NewActivity.this);
-                        Resolution[] sizes = camera.getSupportedPictureSizes();
-                        Resolution choosenSize = sizes[0];
-                        pictureSize = choosenSize;
-                        camera.setOutputSize(choosenSize);
-                        surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
-                        camera.openForPreview(surfaceView.getHolder());
-                    } catch (CameraNotAvailableException e) {
-                        e.printStackTrace();
-                    }
-                }
-
-                @Override
-                public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-                }
-
-                @Override
-                public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-                }
-            };
-
-            surfaceView.getHolder().addCallback(surfaceHolderCallback);
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Util.log("___onPause");
-
-        if(camera != null) {
-            camera.close();
-            camera = null;
         }
     }
 

@@ -60,8 +60,8 @@ public class TimelapseController {
                 capturedPhotos++;
 
                 if(capturedPhotos == timelapseConfig.getPhotosLimit()) {
-                    stop();
                     onTimelapseStateChangeListener.onComplete();
+                    stop();
                     return;
                 } else {
                     onTimelapseStateChangeListener.onProgress();
@@ -69,8 +69,11 @@ public class TimelapseController {
 
                 Thread.sleep(timelapseConfig.getMilisecondsInterval());
 
-                if(camera == null)
+                if(camera == null) {
+                    Util.log("onPhotoCaptureListener::onFail");
+                    onTimelapseStateChangeListener.onFail();
                     return;
+                }
 
                 camera.capturePhoto();
             } catch (InterruptedException e) {

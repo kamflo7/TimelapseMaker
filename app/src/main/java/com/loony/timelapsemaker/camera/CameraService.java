@@ -61,8 +61,8 @@ public class CameraService extends Service {
             return START_NOT_STICKY;
         }
 
-        Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED);
-        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+        //Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED);
+        //LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
 
         timelapseState = TimelapseState.NOT_FINISHED;
         timelapseConfig = intent.getExtras().getParcelable(NewActivity.PARCEL_TIMELAPSE_CONFIG);
@@ -75,6 +75,7 @@ public class CameraService extends Service {
                     timelapseController.start(new OnTimelapseStateChangeListener() {
                         @Override
                         public void onComplete() {
+                            Util.log("CameraService::onComplete");
                             timelapseState = TimelapseState.FINISHED;
                             timelapseController.stop();
                             Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED);
