@@ -123,8 +123,8 @@ public class CameraImplV2 implements Camera {
         if(outputSize == null) // should be another name for this exception, but this is small simple project, so who cares
             throw new CameraNotAvailableException("Output size is not defined");
 
-        dummySurface = new SurfaceTexture(10);
-        dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
+        //dummySurface = new SurfaceTexture(10);
+        //dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
         previewSurface = surfaceHolder.getSurface();
         startBackgroundThread();
 

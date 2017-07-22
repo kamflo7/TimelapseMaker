@@ -33,6 +33,9 @@ public class Util {
     public static final String BROADCAST_MESSAGE_FINISHED = "finished";
     public static final String BROADCAST_MESSAGE_FINISHED_FAILED = "finishedWithFail";
 
+    public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO = "capturedPhoto";
+    public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
+
 
     public static Camera getAppropriateCamera() {
         //Random r = new Random();

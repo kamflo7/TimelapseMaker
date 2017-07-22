@@ -17,11 +17,12 @@ import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.loony.timelapsemaker.camera.Camera;
 import com.loony.timelapsemaker.camera.CameraService;
-import com.loony.timelapsemaker.camera.OnCameraStateChangeListener;
 import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
@@ -31,27 +32,92 @@ public class NewActivity extends AppCompatActivity {
     public static final String PARCEL_TIMELAPSE_CONFIG = "parcelTimelapseConfig";
 
     private Camera camera;
+    private Resolution pictureSize;
+
     private SurfaceView surfaceView;
     private SurfaceHolder.Callback surfaceHolderCallback;
     private ImageButton btnStartTimelapse;
+    private LinearLayout statsPanel;
+    private TextView webAccessTxt, intervalTxt, photosCapturedTxt, nextCaptureTxt, resolutionTxt;
 
+    private TimelapseConfig timelapseConfig;
     private boolean isDoingTimelapse;
-    //private boolean isPreviewing;
 
     // camera service
     private boolean cameraServiceBound;
     private CameraService cameraService;
     private ServiceConnection cameraConnection;
 
-    private Resolution pictureSize;
+
+    // statsPanel vars
+    private Thread threadCountdown;
+    private long lastPhotoTakenAtMilisTime;
+
+    // todo: test this method if working correctly; edit: rather ok
+    private void startCountDownToNextPhoto() {
+        Util.log("startCountDownToNextPhoto() called");
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    long differenceMs = (lastPhotoTakenAtMilisTime + timelapseConfig.getMilisecondsInterval()) - System.currentTimeMillis();
+                    final int seconds;
+
+                    if(differenceMs > 0)
+                        seconds = (int) Math.ceil(differenceMs / 1000L);
+                    else seconds = 0;
+
+                    //nextCaptureTxt.post();
+
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            nextCaptureTxt.setText("Next capture:\n" + seconds + "s");
+                        }
+                    });
+
+                    if(Thread.currentThread().isInterrupted()) {
+                        return;
+                    }
+
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        Util.log("Problem here with Thread.sleep");
+                    }
+                }
+            }
+        };
+        threadCountdown = new Thread(runnable);
+        threadCountdown.start();
+    }
+
+    private void stopCountDownToNextPhoto() {
+        Util.log("stopCountDownToNextPhoto() called");
+        threadCountdown.interrupt();
+        threadCountdown = null;
+        Util.log("stopCountDownToNextPhoto() called 2/2");
+    }
+
+    private void updateUIphotosCaptured(int captured) {
+        photosCapturedTxt.setText(String.format("Captured:\n%d of %d", captured, timelapseConfig.getPhotosLimit()));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        setContentView(R.layout.activity_new);
+        setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceView = (SurfaceView) findViewById(R.id.surface);
         btnStartTimelapse = (ImageButton) findViewById(R.id.btnStartTimelapse);
+        statsPanel = (LinearLayout) findViewById(R.id.statsPanel);
+        webAccessTxt = (TextView) findViewById(R.id.webAccessTxt);
+        intervalTxt = (TextView) findViewById(R.id.intervalTxt);
+        photosCapturedTxt = (TextView) findViewById(R.id.photosCapturedTxt);
+        nextCaptureTxt = (TextView) findViewById(R.id.nextCaptureTxt);
+        resolutionTxt = (TextView) findViewById(R.id.resolutionTxt);
+
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
 
         if(savedInstanceState == null) { // FIRST START APP; OTHERWISE AFTER CRASH
@@ -72,15 +138,25 @@ public class NewActivity extends AppCompatActivity {
         }
     }
 
-    @Override // empty
+    @Override // startCountDownToNextPhoto
     protected void onStart() {
         super.onStart();
+
+        if(isDoingTimelapse && threadCountdown == null) {
+            startCountDownToNextPhoto();
+        }
+
         Util.log("___onStart");
     }
 
-    @Override // empty
+    @Override // stopCountDownToNextPhoto
     protected void onStop() {
         super.onStop();
+
+        if(threadCountdown != null) {
+            stopCountDownToNextPhoto();
+        }
+
         Util.log("___onStop");
     }
 
@@ -127,8 +203,8 @@ public class NewActivity extends AppCompatActivity {
     public void btnStartTimelapse(View v) {
         if(!isDoingTimelapse) {
             TimelapseConfig config = new TimelapseConfig();
-            config.setPhotosLimit(2);
-            config.setMilisecondsInterval(3000L);
+            config.setPhotosLimit(3);
+            config.setMilisecondsInterval(4000L);
             config.setPictureSize(pictureSize);
 
             startTimelapse(config);
@@ -143,14 +219,18 @@ public class NewActivity extends AppCompatActivity {
             String msg = intent.getStringExtra(Util.BROADCAST_MESSAGE);
             if(msg != null) {
                 if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED)) {
+                    Toast.makeText(NewActivity.this, "Timelapse has been done", Toast.LENGTH_LONG).show();
                     Util.log("Timelapse work is done");
                     stopTimelapse();
                     startPreview(surfaceView.getHolder());
-                    Toast.makeText(NewActivity.this, "Timelapse has been done", Toast.LENGTH_LONG).show();
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
                     Util.log("Timelapse work is done (but with fail)");
                     stopTimelapse();
                     startPreview(surfaceView.getHolder());
+                } else if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
+                    lastPhotoTakenAtMilisTime = System.currentTimeMillis();
+                    int capturedPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
+                    updateUIphotosCaptured(capturedPhotos);
                 }
             }
         }
@@ -158,22 +238,41 @@ public class NewActivity extends AppCompatActivity {
 
     // stopPreview(), startCameraService(), bindToCameraService(), set 'isDoingTimelapse' flag, UI: change icon
     private void startTimelapse(TimelapseConfig timelapseConfig) {
+        this.timelapseConfig = timelapseConfig;
         stopPreview();
         startCameraService(timelapseConfig);
         bindToCameraService();
 
         isDoingTimelapse = true;
         btnStartTimelapse.setImageResource(R.drawable.stop);
+        statsPanel.setVisibility(View.VISIBLE);
+
+        // update UI statsPanel:
+        // private TextView webAccessTxt, intervalTxt, photosCapturedTxt, nextCaptureTxt, resolutionTxt;
+        webAccessTxt.setText("WebAccess:\nOffline");
+        intervalTxt.setText(String.format("Interval:\n%.02f", (float) (timelapseConfig.getMilisecondsInterval()/1000)));
+        updateUIphotosCaptured(0);
+        lastPhotoTakenAtMilisTime = System.currentTimeMillis();
+        startCountDownToNextPhoto();
+        resolutionTxt.setText(String.format("Resolution:\n%dx%d", timelapseConfig.getPictureSize().getWidth(), timelapseConfig.getPictureSize().getHeight()));
+
         Util.log("Started timelapse");
     }
 
     // stopService(), unbindService(), set 'isDoingTimelapse' flag, UI: change icon
     private void stopTimelapse() {
-        Intent intentCamera = new Intent(this, CameraService.class);
-        stopService(intentCamera);
-        unbindService(cameraConnection);
-        isDoingTimelapse = false;
+        if(threadCountdown != null)
+            stopCountDownToNextPhoto();
+
         btnStartTimelapse.setImageResource(R.drawable.record);
+
+        Intent intentCamera = new Intent(this, CameraService.class);
+        unbindService(cameraConnection);
+        stopService(intentCamera);
+        isDoingTimelapse = false;
+
+        statsPanel.setVisibility(View.GONE);
+
         Util.log("Trying to stop timelapse session");
     }
 
@@ -186,13 +285,16 @@ public class NewActivity extends AppCompatActivity {
             pictureSize = choosenSize;
             camera.setOutputSize(choosenSize);
             surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
-            camera.openForPreview(surfaceView.getHolder());
+            camera.openForPreview(surfaceHolder);
         } catch (CameraNotAvailableException e) {
             e.printStackTrace();
         }
     }
 
     private void stopPreview() {
+        if(surfaceHolderCallback != null)
+            surfaceView.getHolder().removeCallback(surfaceHolderCallback);
+
         try {
             camera.close();
             camera = null;
@@ -218,6 +320,8 @@ public class NewActivity extends AppCompatActivity {
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
                 cameraServiceBound = false;
+                cameraService = null;
+                cameraConnection = null;
             }
         };
         bindService(intentCamera, cameraConnection, 0);

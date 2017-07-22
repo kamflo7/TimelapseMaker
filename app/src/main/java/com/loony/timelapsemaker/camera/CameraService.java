@@ -91,8 +91,10 @@ public class CameraService extends Service {
                         }
 
                         @Override
-                        public void onProgress() {
-
+                        public void onProgress(int capturedPhotos) {
+                            Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO);
+                            i.putExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, capturedPhotos);
+                            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
                         }
                     });
                 } catch (CameraNotAvailableException e) {
@@ -175,6 +177,7 @@ public class CameraService extends Service {
         stopForeground(true);
         if(worker != null) worker.quit();
         super.onDestroy();
+        Util.log("CameraService::onDestroy() called"); //ok
     }
 
     public class LocalBinder extends Binder {

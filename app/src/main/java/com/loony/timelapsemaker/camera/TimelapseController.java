@@ -64,7 +64,7 @@ public class TimelapseController {
                     stop();
                     return;
                 } else {
-                    onTimelapseStateChangeListener.onProgress();
+                    onTimelapseStateChangeListener.onProgress(capturedPhotos);
                 }
 
                 Thread.sleep(timelapseConfig.getMilisecondsInterval());

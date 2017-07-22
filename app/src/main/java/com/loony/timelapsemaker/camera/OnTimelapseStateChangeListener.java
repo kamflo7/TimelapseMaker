@@ -5,7 +5,7 @@ package com.loony.timelapsemaker.camera;
  */
 
 public interface OnTimelapseStateChangeListener {
-    void onProgress();
+    void onProgress(int capturedPhotos);
     void onComplete();
     void onFail();
 }
