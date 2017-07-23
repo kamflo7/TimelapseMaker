@@ -181,9 +181,15 @@ public class CameraImplV2 implements Camera {
             @Override
             public void onImageAvailable(ImageReader imageReader) {
                 Image image = imageReader.acquireLatestImage();
-                saveImageToDisk(image);
+                //saveImageToDisk(image);
+
+                ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+                byte[] bytes = new byte[buffer.remaining()];
+                buffer.get(bytes);
+
                 image.close();
-                onPhotoCaptureListener.onCreate(new byte[10]);
+
+                onPhotoCaptureListener.onCreate(bytes);
                 Util.log("OnImageAvailableListener called");
             }
         }, backgroundHandler);
@@ -224,7 +230,7 @@ public class CameraImplV2 implements Camera {
 
     private int photoNumberTest;
 
-    private void saveImageToDisk(Image image) { // todo: temporary
+    /*private void saveImageToDisk(Image image) { // todo: temporary
         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
@@ -244,7 +250,7 @@ public class CameraImplV2 implements Camera {
         } catch(IOException e) {
             Util.log("Problem with saving image " + e.getMessage());
         }
-    }
+    }*/
 
     @Override
     public void capturePhoto() {

@@ -3,6 +3,7 @@ package com.loony.timelapsemaker.camera;
 import android.content.Context;
 import android.os.PowerManager;
 
+import com.loony.timelapsemaker.StorageManager;
 import com.loony.timelapsemaker.Util;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 
@@ -24,6 +25,9 @@ public class TimelapseController {
     private OnTimelapseStateChangeListener onTimelapseStateChangeListener;
     private int capturedPhotos;
 
+    private StorageManager storageManager;
+    private String directoryForPhotos;
+
     public TimelapseController(Context context, TimelapseConfig timelapseConfig) throws CameraNotAvailableException {
         this.context = context;
         this.timelapseConfig = timelapseConfig;
@@ -34,6 +38,19 @@ public class TimelapseController {
 
     public void start(OnTimelapseStateChangeListener onTimelapseStateChangeListener) throws CameraNotAvailableException {
         this.onTimelapseStateChangeListener = onTimelapseStateChangeListener;
+
+        storageManager = new StorageManager();
+        if(!storageManager.isExternalStorageAvailable()) {
+            this.onTimelapseStateChangeListener.onFail();
+            return;
+        }
+
+        directoryForPhotos = storageManager.createDirectory();
+        if(directoryForPhotos == null) {
+            this.onTimelapseStateChangeListener.onFail();
+            return;
+        }
+
         powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "myWakeLockTag");
         wakeLock.acquire();
@@ -56,6 +73,8 @@ public class TimelapseController {
         @Override
         public void onCreate(byte[] img) {
             // todo: save
+            storageManager.saveImage(directoryForPhotos, String.format("photo%d", capturedPhotos), img);
+
             try {
                 capturedPhotos++;
 
@@ -83,8 +102,10 @@ public class TimelapseController {
 
         @Override
         public void onFail() {
-            stop();
-            onTimelapseStateChangeListener.onFail();
+            if(camera != null) {
+                stop();
+                onTimelapseStateChangeListener.onFail();
+            }
         }
     };
 

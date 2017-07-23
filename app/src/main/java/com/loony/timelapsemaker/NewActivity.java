@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -26,6 +27,11 @@ import com.loony.timelapsemaker.camera.CameraService;
 import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
+
+import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 public class NewActivity extends AppCompatActivity {
     public static final int REQUEST_PERMISSIONS = 0x1;
@@ -53,7 +59,6 @@ public class NewActivity extends AppCompatActivity {
     private Thread threadCountdown;
     private long lastPhotoTakenAtMilisTime;
 
-    // todo: test this method if working correctly; edit: rather ok
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
         Runnable runnable = new Runnable() {
@@ -186,6 +191,8 @@ public class NewActivity extends AppCompatActivity {
             };
 
             surfaceView.getHolder().addCallback(surfaceHolderCallback);
+        } else {
+            // todo #1: force retrieve information about current timelapse session statistics? [interval, capturedPhotos, etc]
         }
     }
 
@@ -203,8 +210,8 @@ public class NewActivity extends AppCompatActivity {
     public void btnStartTimelapse(View v) {
         if(!isDoingTimelapse) {
             TimelapseConfig config = new TimelapseConfig();
-            config.setPhotosLimit(3);
-            config.setMilisecondsInterval(4000L);
+            config.setPhotosLimit(7);
+            config.setMilisecondsInterval(7000L);
             config.setPictureSize(pictureSize);
 
             startTimelapse(config);
@@ -261,14 +268,19 @@ public class NewActivity extends AppCompatActivity {
 
     // stopService(), unbindService(), set 'isDoingTimelapse' flag, UI: change icon
     private void stopTimelapse() {
+        Util.log("____NewActivity::stopTimelapse() called");
+
         if(threadCountdown != null)
             stopCountDownToNextPhoto();
 
         btnStartTimelapse.setImageResource(R.drawable.record);
 
-        Intent intentCamera = new Intent(this, CameraService.class);
-        unbindService(cameraConnection);
-        stopService(intentCamera);
+        if(cameraServiceBound) {
+            unbindService(cameraConnection);
+            cameraServiceBound = false; // because cameraConnection callback#onDisconnect does not execute immediately - at the same time Activity gets
+            // broadcast message about finishing timelapse, and that also calls stopTimelapse() where 'cameraServiceBound' is TRUE still! which provides to exceptions
+        }
+        stopCameraService();
         isDoingTimelapse = false;
 
         statsPanel.setVisibility(View.GONE);
@@ -312,6 +324,7 @@ public class NewActivity extends AppCompatActivity {
         cameraConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder service) {
+                Util.log("NewActivity::onServiceConnected() called");
                 CameraService.LocalBinder binder = (CameraService.LocalBinder) service;
                 cameraService = binder.getService();
                 cameraServiceBound = true;
@@ -319,6 +332,7 @@ public class NewActivity extends AppCompatActivity {
 
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
+                Util.log("NewActivity::onServiceDisconnected() called");
                 cameraServiceBound = false;
                 cameraService = null;
                 cameraConnection = null;
