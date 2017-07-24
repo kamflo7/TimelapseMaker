@@ -283,8 +283,6 @@ public class NewActivity extends AppCompatActivity {
         stopCameraService();
         isDoingTimelapse = false;
 
-        statsPanel.setVisibility(View.GONE);
-
         Util.log("Trying to stop timelapse session");
     }
 

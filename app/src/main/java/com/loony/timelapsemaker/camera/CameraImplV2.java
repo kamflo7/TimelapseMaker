@@ -177,7 +177,6 @@ public class CameraImplV2 implements Camera {
 
         imageReader = ImageReader.newInstance(outputSize.getWidth(), outputSize.getHeight(), IMAGE_FORMAT, 2);
         imageReader.setOnImageAvailableListener(new ImageReader.OnImageAvailableListener() {
-            // todo: edit to call listener and pass byte[] buffer of image to make this compatible with different versions of android
             @Override
             public void onImageAvailable(ImageReader imageReader) {
                 Image image = imageReader.acquireLatestImage();
@@ -228,9 +227,7 @@ public class CameraImplV2 implements Camera {
         }
     }
 
-    private int photoNumberTest;
-
-    /*private void saveImageToDisk(Image image) { // todo: temporary
+    /*private void saveImageToDisk(Image image) { //
         ByteBuffer buffer = image.getPlanes()[0].getBuffer();
         byte[] bytes = new byte[buffer.remaining()];
         buffer.get(bytes);
