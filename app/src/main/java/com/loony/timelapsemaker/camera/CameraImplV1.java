@@ -57,20 +57,13 @@ public class CameraImplV1 implements com.loony.timelapsemaker.camera.Camera {
             throw new CameraNotAvailableException("Output size is not defined");
 
         dummySurface = new SurfaceTexture(10);
-//        dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
-//        previewSurface = new Surface(dummySurface);
+
         try {
-//            surfaceView = new SurfaceView(this.context);
-//            surfaceView.getHolder().setFixedSize(outputSize.getWidth(), outputSize.getHeight());
-//            camera.setPreviewDisplay(surfaceView.getHolder());
             camera.setPreviewTexture(dummySurface);
-            //camera.startPreview();
             onCameraStateChangeListener.onCameraOpen();
         } catch (IOException e) {
             throw new CameraNotAvailableException("camera.setPreviewDisplay() -> " + e.getMessage());
         }
-
-
     }
 
     @Override

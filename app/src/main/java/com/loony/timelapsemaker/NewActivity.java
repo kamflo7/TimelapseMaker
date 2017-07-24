@@ -43,6 +43,7 @@ public class NewActivity extends AppCompatActivity {
     private SurfaceView surfaceView;
     private SurfaceHolder.Callback surfaceHolderCallback;
     private ImageButton btnStartTimelapse;
+    private ImageButton btnSettings;
     private LinearLayout statsPanel;
     private TextView webAccessTxt, intervalTxt, photosCapturedTxt, nextCaptureTxt, resolutionTxt;
 
@@ -116,6 +117,7 @@ public class NewActivity extends AppCompatActivity {
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceView = (SurfaceView) findViewById(R.id.surface);
         btnStartTimelapse = (ImageButton) findViewById(R.id.btnStartTimelapse);
+        btnSettings = (ImageButton) findViewById(R.id.btnSettings);
         statsPanel = (LinearLayout) findViewById(R.id.statsPanel);
         webAccessTxt = (TextView) findViewById(R.id.webAccessTxt);
         intervalTxt = (TextView) findViewById(R.id.intervalTxt);
@@ -170,6 +172,9 @@ public class NewActivity extends AppCompatActivity {
         super.onResume();
         Util.log("___onResume");
 
+        if(true) // todo: remporary for dialog testing
+            return;
+
         if(!isDoingTimelapse) {
             if (surfaceHolderCallback != null) {
                 surfaceView.getHolder().removeCallback(surfaceHolderCallback);
@@ -218,6 +223,10 @@ public class NewActivity extends AppCompatActivity {
         } else {
             stopTimelapse();
         }
+    }
+
+    public void btnSettingActionClick(View v) {
+
     }
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
