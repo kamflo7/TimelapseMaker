@@ -1,22 +1,33 @@
 package com.loony.timelapsemaker;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.annotation.TargetApi;
+import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.drawable.ColorDrawable;
+import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.ViewAnimationUtils;
+import android.view.Window;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -43,7 +54,8 @@ public class NewActivity extends AppCompatActivity {
     private SurfaceView surfaceView;
     private SurfaceHolder.Callback surfaceHolderCallback;
     private ImageButton btnStartTimelapse;
-    private ImageButton btnSettings;
+    //private ImageButton btnSettings;
+    private FloatingActionButton fab;
     private LinearLayout statsPanel;
     private TextView webAccessTxt, intervalTxt, photosCapturedTxt, nextCaptureTxt, resolutionTxt;
 
@@ -117,7 +129,8 @@ public class NewActivity extends AppCompatActivity {
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceView = (SurfaceView) findViewById(R.id.surface);
         btnStartTimelapse = (ImageButton) findViewById(R.id.btnStartTimelapse);
-        btnSettings = (ImageButton) findViewById(R.id.btnSettings);
+        //btnSettings = (ImageButton) findViewById(R.id.btnSettings);
+        fab = (FloatingActionButton) findViewById(R.id.fab);
         statsPanel = (LinearLayout) findViewById(R.id.statsPanel);
         webAccessTxt = (TextView) findViewById(R.id.webAccessTxt);
         intervalTxt = (TextView) findViewById(R.id.intervalTxt);
@@ -172,7 +185,9 @@ public class NewActivity extends AppCompatActivity {
         super.onResume();
         Util.log("___onResume");
 
-        if(true) // todo: remporary for dialog testing
+
+        boolean a = true;
+        if(a) // todo: remporary for dialog testing
             return;
 
         if(!isDoingTimelapse) {
@@ -226,6 +241,72 @@ public class NewActivity extends AppCompatActivity {
     }
 
     public void btnSettingActionClick(View v) {
+        Util.log("Settings click");
+        final View dialogView = View.inflate(this, R.layout.dialog_settings, null);
+        final Dialog dialog = new Dialog(this, R.style.MyAlertDialogStyle);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog.setContentView(dialogView);
+        dialog.show();
+
+        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+            @Override
+            public void onShow(DialogInterface dialogInterface) {
+                Util.log("CZY TO SIE POKAZUJE ?");
+                revealShow(dialogView, true, null);
+            }
+        });
+
+        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
+            @Override
+            public boolean onKey(DialogInterface dialogInterface, int i, KeyEvent keyEvent) {
+                if (i == KeyEvent.KEYCODE_BACK){
+
+                    revealShow(dialogView, false, dialog);
+                    return true;
+                }
+                return false;
+            }
+        });
+
+        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
+    }
+
+    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
+    private void revealShow(View dialogView, boolean b, final Dialog dialog) {
+        Util.log("revealShow executes");
+        final View view = dialogView.findViewById(R.id.dialog);
+
+        int w = view.getWidth();
+        int h = view.getHeight();
+
+        int endRadius = (int) Math.hypot(w, h);
+
+        int cx = (int) (fab.getX() + (fab.getWidth()/2));
+        int cy = (int) (fab.getY())+ fab.getHeight() + 56;
+
+        if(b){
+            Animator revealAnimator = ViewAnimationUtils.createCircularReveal(view, cx,cy, 0, endRadius);
+
+            view.setVisibility(View.VISIBLE);
+            revealAnimator.setDuration(700);
+            revealAnimator.start();
+
+        } else {
+            Animator anim =
+                    ViewAnimationUtils.createCircularReveal(view, cx, cy, endRadius, 0);
+
+            anim.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    super.onAnimationEnd(animation);
+                    dialog.dismiss();
+                    view.setVisibility(View.INVISIBLE);
+
+                }
+            });
+            anim.setDuration(700);
+            anim.start();
+        }
 
     }
 

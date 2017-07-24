@@ -2,13 +2,14 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="#2f2e30"
+    android:id="@+id/dialog"
     >
     <LinearLayout
         android:id="@+id/navigation"
         android:layout_width="50dp"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:background="#ffcb00"
+        android:background="@drawable/background_border_layout"
         android:layout_alignParentLeft="true"
 
         >
@@ -18,6 +19,16 @@
         android:layout_height="40dp"
         android:layout_toRightOf="@+id/navigation"
         android:background="#ffcb00"
-        ></RelativeLayout>
+        >
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Basic settings"
+            android:textSize="22sp"
+            android:layout_centerVertical="true"
+            android:textColor="#040000"
+            android:layout_marginLeft="5dp"
+            />
+    </RelativeLayout>
 
 </RelativeLayout>

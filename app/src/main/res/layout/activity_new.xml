@@ -60,6 +60,7 @@
             android:layout_marginTop="15dp"
             />-->
         <android.support.design.widget.FloatingActionButton
+            android:id="@+id/fab"
             android:layout_width="30dp"
             android:layout_height="wrap_content"
             android:src="@drawable/settings"
@@ -72,5 +73,60 @@
 
             android:onClick="btnSettingActionClick"
             />
+
+        <LinearLayout
+            android:id="@+id/statsPanel"
+            android:visibility="visible"
+            android:padding="5dp"
+            android:orientation="horizontal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_centerHorizontal="true"
+            android:background="#33000000"
+            >
+            <TextView
+                android:textColor="#ffffff"
+                android:id="@+id/webAccessTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="WebAccess:\n"/>
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="wrap_content" />
+            <TextView
+                android:textColor="#ffffff"
+                android:id="@+id/resolutionTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Resolution:\n"/>
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="wrap_content" />
+            <TextView
+                android:textColor="#ffffff"
+                android:id="@+id/intervalTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Interval:\n"/>
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="wrap_content" />
+            <TextView
+                android:textColor="#ffffff"
+                android:id="@+id/photosCapturedTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Captured:\n"/>
+            <Space
+                android:layout_width="10dp"
+                android:layout_height="wrap_content" />
+            <TextView
+                android:textColor="#ffffff"
+                android:id="@+id/nextCaptureTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Next capture:\n"/>
+        </LinearLayout>
     </RelativeLayout>
 </FrameLayout>
