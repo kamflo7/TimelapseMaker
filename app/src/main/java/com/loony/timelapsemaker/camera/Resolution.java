@@ -21,4 +21,9 @@ public class Resolution {
     public int getHeight() {
         return height;
     }
+
+    @Override
+    public String toString() {
+        return width+"x"+height;
+    }
 }

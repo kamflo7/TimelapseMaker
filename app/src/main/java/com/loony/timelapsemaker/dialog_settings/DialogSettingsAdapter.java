@@ -3,6 +3,7 @@ package com.loony.timelapsemaker.dialog_settings;
 import android.content.Context;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.v7.widget.SwitchCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -44,6 +45,7 @@ public class DialogSettingsAdapter extends ArrayAdapter<DialogOption> {
             holder.icon = (ImageView) view.findViewById(R.id.icon);
             holder.label = (TextView) view.findViewById(R.id.label);
             holder.description = (TextView) view.findViewById(R.id.description);
+            holder.switchCompat = (SwitchCompat) view.findViewById(R.id.switchBtn);
 
             view.setTag(holder);
         } else {
@@ -56,11 +58,19 @@ public class DialogSettingsAdapter extends ArrayAdapter<DialogOption> {
         holder.label.setText(item.label);
         holder.description.setText(item.description);
 
+        if(item.switchState != DialogOption.Switch.NOT_EXIST) {
+            holder.switchCompat.setVisibility(View.VISIBLE);
+            holder.switchCompat.setChecked(item.switchState == DialogOption.Switch.ENABLED);
+        } else {
+            holder.switchCompat.setVisibility(View.GONE);
+        }
+
         return view;
     }
 
     private class Holder {
         public ImageView icon;
         public TextView label, description;
+        public SwitchCompat switchCompat;
     }
 }

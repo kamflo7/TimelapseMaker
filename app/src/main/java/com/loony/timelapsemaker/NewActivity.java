@@ -17,9 +17,11 @@ import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.KeyEvent;
@@ -32,6 +34,7 @@ import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ListView;
+import android.widget.NumberPicker;
 import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -50,6 +53,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.regex.Pattern;
 
 public class NewActivity extends AppCompatActivity {
     public static final int REQUEST_PERMISSIONS = 0x1;
@@ -78,6 +82,14 @@ public class NewActivity extends AppCompatActivity {
     // statsPanel vars
     private Thread threadCountdown;
     private long lastPhotoTakenAtMilisTime;
+
+    // vars which are setting by (dialog & shared prefs)
+    private @Nullable Resolution[] supportedResolutions;
+    private Resolution choosenSize;
+
+    private int photoResolutionSelectedIndex;
+    private int intervalMiliseconds;
+    private int amountOfPhotos;
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -150,6 +162,9 @@ public class NewActivity extends AppCompatActivity {
         if(savedInstanceState == null) { // FIRST START APP; OTHERWISE AFTER CRASH
             if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
                 ActivityCompat.requestPermissions(this, Util.NECESSARY_PERMISSIONS_START_APP, REQUEST_PERMISSIONS);
+                // todo: event get resolution
+            } else {
+                getSupportedResolutions();
             }
         } else {
             Util.log("NewActivity::onCreate, savedInstanceState not null=crash 1/3");
@@ -161,6 +176,8 @@ public class NewActivity extends AppCompatActivity {
                     isDoingTimelapse = true;
                     btnStartTimelapse.setImageResource(R.drawable.stop);
                 }
+            } else {
+                getSupportedResolutions();
             }
         }
     }
@@ -233,6 +250,19 @@ public class NewActivity extends AppCompatActivity {
         }
     }
 
+    private void getSupportedResolutions() {
+        Camera camera = Util.getAppropriateCamera();
+        try {
+            camera.prepare(this);
+            this.supportedResolutions = camera.getSupportedPictureSizes();
+            choosenSize = supportedResolutions[0];
+        } catch (CameraNotAvailableException e) {
+            e.printStackTrace();
+        }
+
+        camera.close();
+    }
+
     // just startTimelapse() or stopTimelapse() call, depending on the 'isDoingTimelapse' value
     public void btnStartTimelapse(View v) {
         if(!isDoingTimelapse) {
@@ -255,18 +285,92 @@ public class NewActivity extends AppCompatActivity {
         dialog.setContentView(dialogView);
         dialog.show();
 
-        ArrayList<DialogOption> options = new ArrayList<>();
-        options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", "1920x1080 (16:9)"));
-        options.add(new DialogOption(R.drawable.ic_settings, "Interval", "Something will be here"));
-        options.add(new DialogOption(R.drawable.ic_settings, "Limit", "Amount of photos to capture"));
-        DialogSettingsAdapter adapter = new DialogSettingsAdapter(this, options);
+        final ArrayList<DialogOption> options = new ArrayList<>();
+        options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", choosenSize.toString()));
+        options.add(new DialogOption(R.drawable.ic_interval, "Interval", "Something will be here"));
+        options.add(new DialogOption(R.drawable.ic_amount, "Limit", "Amount of photos to capture"));
+        options.add(new DialogOption(R.drawable.ic_sd_storage, "Storage", "Storage location for your timalapses"));
+        options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website", DialogOption.Switch.DISABLED));
+        final DialogSettingsAdapter adapter = new DialogSettingsAdapter(this, options);
 
         ListView listView = (ListView) dialogView.findViewById(R.id.optionsList);
         listView.setAdapter(adapter);
         listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-                Util.log("Kliknieto w " + position);
+                switch(position) {
+                    case 0: {
+                        //final String[] resOptions = new String[]{"4k", "full hd", "hd", "sd", "kalkulator ftw"};
+
+                        final String[] resOptions = new String[supportedResolutions.length];
+                        for(int i=0; i<resOptions.length; i++)
+                            resOptions[i] = String.format("%dx%d", supportedResolutions[i].getWidth(), supportedResolutions[i].getHeight());
+
+                        final AlertDialog.Builder builder = new AlertDialog.Builder(NewActivity.this);
+                        builder.setTitle(R.string.dialog_choose_resolution)
+                                .setItems(resOptions, new DialogInterface.OnClickListener() {
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        Util.log("Wybrales " + resOptions[which]);
+                                        dialog.dismiss();
+                                        options.get(0).description = resOptions[which];
+                                        adapter.notifyDataSetChanged();
+                                    }
+                                });
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                        break;
+                    }
+                    case 1: {
+                        final NumberPicker numberPicker = new NumberPicker(NewActivity.this);
+                        numberPicker.setMinValue(3);
+                        numberPicker.setMaxValue(60 * 5);
+
+                        final AlertDialog.Builder builder = new AlertDialog.Builder(NewActivity.this);
+                        builder.setTitle(R.string.dialog_choose_interval)
+                            .setView(numberPicker)
+                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    Util.log("Zaakceptowano z value " + numberPicker.getValue());
+                                    dialog.dismiss();
+                                }
+                            })
+                            .setNegativeButton("CANCEL", new DialogInterface.OnClickListener(){
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                        });
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                        break;
+                    }
+                    case 2: {
+                        final NumberPicker numberPicker = new NumberPicker(NewActivity.this);
+                        numberPicker.setMinValue(3);
+                        numberPicker.setMaxValue(1000);
+
+                        final AlertDialog.Builder builder = new AlertDialog.Builder(NewActivity.this);
+                        builder.setTitle(R.string.dialog_choose_amount_photos)
+                                .setView(numberPicker)
+                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        Util.log("Zaakceptowano z value " + numberPicker.getValue());
+                                        dialog.dismiss();
+                                    }
+                                })
+                                .setNegativeButton("CANCEL", new DialogInterface.OnClickListener(){
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        dialog.dismiss();
+                                    }
+                                });
+                        AlertDialog dialog = builder.create();
+                        dialog.show();
+                        break;
+                    }
+                }
             }
         });
 
@@ -402,8 +506,8 @@ public class NewActivity extends AppCompatActivity {
         camera = Util.getAppropriateCamera();
         try {
             camera.prepare(NewActivity.this);
-            Resolution[] sizes = camera.getSupportedPictureSizes();
-            Resolution choosenSize = sizes[0];
+//            Resolution[] sizes = camera.getSupportedPictureSizes();
+//            Resolution choosenSize = sizes[0];
             pictureSize = choosenSize;
             camera.setOutputSize(choosenSize);
             surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
@@ -463,8 +567,10 @@ public class NewActivity extends AppCompatActivity {
                 for(int grantResult : grantResults) {
                     if (grantResult != PackageManager.PERMISSION_GRANTED) {
                         Toast.makeText(this, "You have to provide permissions to use app.", Toast.LENGTH_LONG).show();
+                        return;
                     }
                 }
+                getSupportedResolutions();
             }
         }
     }

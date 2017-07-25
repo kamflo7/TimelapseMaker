@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">TimelapseMaker</string>
+    <string name="dialog_choose_resolution">Choose photo resolution</string>
+    <string name="dialog_choose_interval">Choose time interval</string>
+    <string name="dialog_choose_amount_photos">Limit photos</string>
 </resources>

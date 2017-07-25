@@ -2,21 +2,24 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="60dp"
-    android:background="#888888"
+
     android:padding="8dp"
     >
     <ImageView
         android:layout_width="wrap_content"
         android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:adjustViewBounds="true"
         android:src="@drawable/ic_photo_size_select"
         android:id="@+id/icon"
+        android:paddingRight="5dp"
         />
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Image resolution"
         android:textColor="#edeced"
-        android:textSize="13dp"
+        android:textSize="18dp"
         android:layout_toRightOf="@+id/icon"
         android:id="@+id/label"
         />
@@ -25,10 +28,20 @@
         android:layout_height="wrap_content"
         android:text="2592x1944 (5 MP 4:3)"
         android:textColor="#a8a7a8"
-        android:textSize="11dp"
+        android:textSize="14dp"
         android:layout_toRightOf="@+id/icon"
         android:layout_alignParentBottom="true"
         android:id="@+id/description"
+        />
+
+    <android.support.v7.widget.SwitchCompat
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="8dp"
+        android:id="@+id/switchBtn"
+        android:visibility="gone"
         />
 </RelativeLayout>
 <!--<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"

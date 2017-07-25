@@ -439,7 +439,8 @@ public class CameraImplV2 implements Camera {
         if(cameraDevice != null)
             cameraDevice.close();
 
-        stopBackgroundThread();
+        if(backgroundThread != null)
+            stopBackgroundThread();
     }
 
     private void setCameraOrientation(CaptureRequest.Builder builder) {
