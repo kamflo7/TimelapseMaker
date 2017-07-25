@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/timelapsemaker.iml" filepath="$PROJECT_DIR$/timelapsemaker.iml" />
       <module fileurl="file://$PROJECT_DIR$/timelapsemaker.iml" filepath="$PROJECT_DIR$/timelapsemaker.iml" />
     </modules>
   </component>

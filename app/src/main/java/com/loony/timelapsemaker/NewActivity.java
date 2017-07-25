@@ -28,8 +28,12 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -38,9 +42,12 @@ import com.loony.timelapsemaker.camera.CameraService;
 import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
+import com.loony.timelapsemaker.dialog_settings.DialogOption;
+import com.loony.timelapsemaker.dialog_settings.DialogSettingsAdapter;
 
 import java.io.File;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 
@@ -247,6 +254,21 @@ public class NewActivity extends AppCompatActivity {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(dialogView);
         dialog.show();
+
+        ArrayList<DialogOption> options = new ArrayList<>();
+        options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", "1920x1080 (16:9)"));
+        options.add(new DialogOption(R.drawable.ic_settings, "Interval", "Something will be here"));
+        options.add(new DialogOption(R.drawable.ic_settings, "Limit", "Amount of photos to capture"));
+        DialogSettingsAdapter adapter = new DialogSettingsAdapter(this, options);
+
+        ListView listView = (ListView) dialogView.findViewById(R.id.optionsList);
+        listView.setAdapter(adapter);
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                Util.log("Kliknieto w " + position);
+            }
+        });
 
         dialog.setOnShowListener(new DialogInterface.OnShowListener() {
             @Override
