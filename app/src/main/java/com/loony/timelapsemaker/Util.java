@@ -41,7 +41,7 @@ public class Util {
         //Random r = new Random();
         //Camera camera = r.nextBoolean() ? new CameraImplV1() : new CameraImplV2();
         Camera camera = new CameraImplV1();
-        //Camera camera = new CameraImplV2();
+//        Camera camera = new CameraImplV2();
         Util.log("Returned camera: " + camera.getClass().toString());
         return camera;
     }

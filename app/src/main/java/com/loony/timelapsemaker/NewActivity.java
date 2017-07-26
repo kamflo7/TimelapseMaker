@@ -1,42 +1,25 @@
 package com.loony.timelapsemaker;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
-import android.annotation.TargetApi;
-import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.graphics.drawable.ColorDrawable;
-import android.os.Build;
-import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.view.KeyEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
-import android.view.ViewAnimationUtils;
-import android.view.Window;
-import android.widget.AdapterView;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
-import android.widget.ListView;
-import android.widget.NumberPicker;
-import android.widget.RelativeLayout;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,30 +28,20 @@ import com.loony.timelapsemaker.camera.CameraService;
 import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
-import com.loony.timelapsemaker.dialog_settings.DialogOption;
-import com.loony.timelapsemaker.dialog_settings.DialogSettingsAdapter;
-
-import java.io.File;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.regex.Pattern;
+import com.loony.timelapsemaker.dialog_settings.DialogSettings;
 
 public class NewActivity extends AppCompatActivity {
     public static final int REQUEST_PERMISSIONS = 0x1;
     public static final String PARCEL_TIMELAPSE_CONFIG = "parcelTimelapseConfig";
 
     private Camera camera;
-    private Resolution pictureSize;
 
     private SurfaceView surfaceView;
     private SurfaceHolder.Callback surfaceHolderCallback;
     private ImageButton btnStartTimelapse;
-    //private ImageButton btnSettings;
     private FloatingActionButton fab;
     private LinearLayout statsPanel;
-    private TextView webAccessTxt, intervalTxt, photosCapturedTxt, nextCaptureTxt, resolutionTxt;
+    private TextView statsWebAccess, statsInterval, statsPhotosCaptured, statsNextCapture, statsResolution;
 
     private TimelapseConfig timelapseConfig;
     private boolean isDoingTimelapse;
@@ -78,18 +51,19 @@ public class NewActivity extends AppCompatActivity {
     private CameraService cameraService;
     private ServiceConnection cameraConnection;
 
+    private SurfaceHolder obtainedSurfaceHolder;
 
     // statsPanel vars
     private Thread threadCountdown;
     private long lastPhotoTakenAtMilisTime;
 
+    private int currentTakenPhotos;
     // vars which are setting by (dialog & shared prefs)
     private @Nullable Resolution[] supportedResolutions;
     private Resolution choosenSize;
-
-    private int photoResolutionSelectedIndex;
-    private int intervalMiliseconds;
-    private int amountOfPhotos;
+    private int intervalMiliseconds = 4000;
+    private int amountOfPhotos = 20;
+    private boolean webEnabled = false;
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -104,12 +78,12 @@ public class NewActivity extends AppCompatActivity {
                         seconds = (int) Math.ceil(differenceMs / 1000L);
                     else seconds = 0;
 
-                    //nextCaptureTxt.post();
 
                     runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            nextCaptureTxt.setText("Next capture:\n" + seconds + "s");
+                            //statsNextCapture.setText("Next capture:\n" + seconds + "s");
+                            updateUInextPhotoCaptureTime(seconds);
                         }
                     });
 
@@ -137,8 +111,43 @@ public class NewActivity extends AppCompatActivity {
         Util.log("stopCountDownToNextPhoto() called 2/2");
     }
 
-    private void updateUIphotosCaptured(int captured) {
-        photosCapturedTxt.setText(String.format("Captured:\n%d of %d", captured, timelapseConfig.getPhotosLimit()));
+
+    private void updateUIResolution() {
+        if(choosenSize == null)
+            statsResolution.setText("not received");
+        else
+            statsResolution.setText(String.format("%dx%d", choosenSize.getWidth(), choosenSize.getHeight()));
+    }
+
+    private void updateUIInterval() {
+        statsInterval.setText(String.format("%.1fs", intervalMiliseconds/1000f));
+    }
+
+    private void updateUIphotosCaptured() {
+        statsPhotosCaptured.setText(String.format("%d/%d", currentTakenPhotos, amountOfPhotos));
+    }
+
+    private void updateUInextPhotoCaptureTime(int secondsToCapture) {
+        statsNextCapture.setText(secondsToCapture == -1 ? "-" : secondsToCapture+"s");
+    }
+
+    private void updateUIWebAccess() {
+        if(isDoingTimelapse) {
+            // todo: show IP if active
+            statsWebAccess.setText(webEnabled ? R.string.text_enabled : R.string.text_disabled);
+            statsWebAccess.setTextColor(this.getResources().getColor(webEnabled ? R.color.statsPanel_enabled : R.color.statsPanel_disabled));
+        } else {
+            statsWebAccess.setText(webEnabled ? R.string.text_enabled : R.string.text_disabled);
+            statsWebAccess.setTextColor(this.getResources().getColor(webEnabled ? R.color.statsPanel_enabled : R.color.statsPanel_disabled));
+        }
+    }
+
+    private void updateUIentire() {
+        updateUIResolution();
+        updateUIInterval();
+        updateUIphotosCaptured();
+        updateUInextPhotoCaptureTime(-1);
+        updateUIWebAccess();
     }
 
     @Override
@@ -151,20 +160,20 @@ public class NewActivity extends AppCompatActivity {
         //btnSettings = (ImageButton) findViewById(R.id.btnSettings);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         statsPanel = (LinearLayout) findViewById(R.id.statsPanel);
-        webAccessTxt = (TextView) findViewById(R.id.webAccessTxt);
-        intervalTxt = (TextView) findViewById(R.id.intervalTxt);
-        photosCapturedTxt = (TextView) findViewById(R.id.photosCapturedTxt);
-        nextCaptureTxt = (TextView) findViewById(R.id.nextCaptureTxt);
-        resolutionTxt = (TextView) findViewById(R.id.resolutionTxt);
+        statsWebAccess = (TextView) findViewById(R.id.webAccessTxtContent);
+        statsInterval = (TextView) findViewById(R.id.intervalTxtContent);
+        statsPhotosCaptured = (TextView) findViewById(R.id.photosCapturedTxtContent);
+        statsNextCapture = (TextView) findViewById(R.id.nextCaptureTxtContent);
+        statsResolution = (TextView) findViewById(R.id.resolutionTxtContent);
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
 
         if(savedInstanceState == null) { // FIRST START APP; OTHERWISE AFTER CRASH
             if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
                 ActivityCompat.requestPermissions(this, Util.NECESSARY_PERMISSIONS_START_APP, REQUEST_PERMISSIONS);
-                // todo: event get resolution
             } else {
                 getSupportedResolutions();
+                updateUIentire();
             }
         } else {
             Util.log("NewActivity::onCreate, savedInstanceState not null=crash 1/3");
@@ -175,9 +184,11 @@ public class NewActivity extends AppCompatActivity {
                     Util.log("NewActivity::onCreate, savedInstanceState not null=crash, CameraService is running, TimelapseController is also running 3/3");
                     isDoingTimelapse = true;
                     btnStartTimelapse.setImageResource(R.drawable.stop);
+                    updateUIentire();
                 }
             } else {
                 getSupportedResolutions();
+                updateUIentire();
             }
         }
     }
@@ -210,9 +221,9 @@ public class NewActivity extends AppCompatActivity {
         Util.log("___onResume");
 
 
-        boolean a = true;
-        if(a) // todo: remporary for dialog testing
-            return;
+//        boolean a = true;
+//        if(a) // todo: remporary for dialog testing
+//            return;
 
         if(!isDoingTimelapse) {
             if (surfaceHolderCallback != null) {
@@ -222,6 +233,7 @@ public class NewActivity extends AppCompatActivity {
             surfaceHolderCallback = new SurfaceHolder.Callback() {
                 @Override
                 public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                    obtainedSurfaceHolder = surfaceHolder;
                     startPreview(surfaceHolder);
                 }
 
@@ -240,13 +252,13 @@ public class NewActivity extends AppCompatActivity {
         }
     }
 
-    @Override // just stopPreview() if previewing
+    @Override // just stopPreviewIfDoes() if previewing
     protected void onPause() {
         super.onPause();
         Util.log("___onPause");
 
         if(camera != null) {
-            stopPreview();
+            stopPreviewIfDoes();
         }
     }
 
@@ -255,7 +267,9 @@ public class NewActivity extends AppCompatActivity {
         try {
             camera.prepare(this);
             this.supportedResolutions = camera.getSupportedPictureSizes();
-            choosenSize = supportedResolutions[0];
+            choosenSize = supportedResolutions[0].getWidth() > supportedResolutions[supportedResolutions.length-1].getWidth() ?
+                    supportedResolutions[0] :
+                    supportedResolutions[supportedResolutions.length-1];
         } catch (CameraNotAvailableException e) {
             e.printStackTrace();
         }
@@ -267,9 +281,9 @@ public class NewActivity extends AppCompatActivity {
     public void btnStartTimelapse(View v) {
         if(!isDoingTimelapse) {
             TimelapseConfig config = new TimelapseConfig();
-            config.setPhotosLimit(7);
-            config.setMilisecondsInterval(7000L);
-            config.setPictureSize(pictureSize);
+            config.setPhotosLimit(this.amountOfPhotos);
+            config.setMilisecondsInterval(this.intervalMiliseconds);
+            config.setPictureSize(this.choosenSize);
 
             startTimelapse(config);
         } else {
@@ -278,162 +292,37 @@ public class NewActivity extends AppCompatActivity {
     }
 
     public void btnSettingActionClick(View v) {
+        stopPreviewIfDoes();
+
         Util.log("Settings click");
-        final View dialogView = View.inflate(this, R.layout.dialog_settings, null);
-        final Dialog dialog = new Dialog(this, R.style.MyAlertDialogStyle);
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(dialogView);
-        dialog.show();
-
-        final ArrayList<DialogOption> options = new ArrayList<>();
-        options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", choosenSize.toString()));
-        options.add(new DialogOption(R.drawable.ic_interval, "Interval", "Something will be here"));
-        options.add(new DialogOption(R.drawable.ic_amount, "Limit", "Amount of photos to capture"));
-        options.add(new DialogOption(R.drawable.ic_sd_storage, "Storage", "Storage location for your timalapses"));
-        options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website", DialogOption.Switch.DISABLED));
-        final DialogSettingsAdapter adapter = new DialogSettingsAdapter(this, options);
-
-        ListView listView = (ListView) dialogView.findViewById(R.id.optionsList);
-        listView.setAdapter(adapter);
-        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        DialogSettings dialogSettings = new DialogSettings(this, fab);
+        dialogSettings.giveSupportedResolutions(supportedResolutions, choosenSize);
+        dialogSettings.setInterval(intervalMiliseconds);
+        dialogSettings.setPhotosLimit(amountOfPhotos);
+        dialogSettings.setWebEnabled(webEnabled);
+        dialogSettings.setOnDialogSettingChangeListener(new DialogSettings.OnDialogSettingChangeListener() {
             @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
-                switch(position) {
-                    case 0: {
-                        //final String[] resOptions = new String[]{"4k", "full hd", "hd", "sd", "kalkulator ftw"};
+            public void onChangePhotoResolution(Resolution resolution) {
+                NewActivity.this.choosenSize = resolution;
+            }
 
-                        final String[] resOptions = new String[supportedResolutions.length];
-                        for(int i=0; i<resOptions.length; i++)
-                            resOptions[i] = String.format("%dx%d", supportedResolutions[i].getWidth(), supportedResolutions[i].getHeight());
+            @Override
+            public void onChangeInterval(int intervalMiliseconds) {
+                NewActivity.this.intervalMiliseconds = intervalMiliseconds;
+            }
 
-                        final AlertDialog.Builder builder = new AlertDialog.Builder(NewActivity.this);
-                        builder.setTitle(R.string.dialog_choose_resolution)
-                                .setItems(resOptions, new DialogInterface.OnClickListener() {
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        Util.log("Wybrales " + resOptions[which]);
-                                        dialog.dismiss();
-                                        options.get(0).description = resOptions[which];
-                                        adapter.notifyDataSetChanged();
-                                    }
-                                });
-                        AlertDialog dialog = builder.create();
-                        dialog.show();
-                        break;
-                    }
-                    case 1: {
-                        final NumberPicker numberPicker = new NumberPicker(NewActivity.this);
-                        numberPicker.setMinValue(3);
-                        numberPicker.setMaxValue(60 * 5);
+            @Override
+            public void onChangePhotosLimit(int amount) {
+                NewActivity.this.amountOfPhotos = amount;
+            }
 
-                        final AlertDialog.Builder builder = new AlertDialog.Builder(NewActivity.this);
-                        builder.setTitle(R.string.dialog_choose_interval)
-                            .setView(numberPicker)
-                            .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    Util.log("Zaakceptowano z value " + numberPicker.getValue());
-                                    dialog.dismiss();
-                                }
-                            })
-                            .setNegativeButton("CANCEL", new DialogInterface.OnClickListener(){
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                }
-                        });
-                        AlertDialog dialog = builder.create();
-                        dialog.show();
-                        break;
-                    }
-                    case 2: {
-                        final NumberPicker numberPicker = new NumberPicker(NewActivity.this);
-                        numberPicker.setMinValue(3);
-                        numberPicker.setMaxValue(1000);
-
-                        final AlertDialog.Builder builder = new AlertDialog.Builder(NewActivity.this);
-                        builder.setTitle(R.string.dialog_choose_amount_photos)
-                                .setView(numberPicker)
-                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        Util.log("Zaakceptowano z value " + numberPicker.getValue());
-                                        dialog.dismiss();
-                                    }
-                                })
-                                .setNegativeButton("CANCEL", new DialogInterface.OnClickListener(){
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        dialog.dismiss();
-                                    }
-                                });
-                        AlertDialog dialog = builder.create();
-                        dialog.show();
-                        break;
-                    }
-                }
+            @Override
+            public void onDialogExit() {
+                startPreview(obtainedSurfaceHolder);
+                updateUIentire();
             }
         });
-
-        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
-            @Override
-            public void onShow(DialogInterface dialogInterface) {
-                Util.log("CZY TO SIE POKAZUJE ?");
-                revealShow(dialogView, true, null);
-            }
-        });
-
-        dialog.setOnKeyListener(new DialogInterface.OnKeyListener() {
-            @Override
-            public boolean onKey(DialogInterface dialogInterface, int i, KeyEvent keyEvent) {
-                if (i == KeyEvent.KEYCODE_BACK){
-
-                    revealShow(dialogView, false, dialog);
-                    return true;
-                }
-                return false;
-            }
-        });
-
-        dialog.getWindow().setBackgroundDrawable(new ColorDrawable(android.graphics.Color.TRANSPARENT));
-    }
-
-    @TargetApi(Build.VERSION_CODES.LOLLIPOP)
-    private void revealShow(View dialogView, boolean b, final Dialog dialog) {
-        Util.log("revealShow executes");
-        final View view = dialogView.findViewById(R.id.dialog);
-
-        int w = view.getWidth();
-        int h = view.getHeight();
-
-        int endRadius = (int) Math.hypot(w, h);
-
-        int cx = (int) (fab.getX() + (fab.getWidth()/2));
-        int cy = (int) (fab.getY())+ fab.getHeight() + 56;
-
-        if(b){
-            Animator revealAnimator = ViewAnimationUtils.createCircularReveal(view, cx,cy, 0, endRadius);
-
-            view.setVisibility(View.VISIBLE);
-            revealAnimator.setDuration(700);
-            revealAnimator.start();
-
-        } else {
-            Animator anim =
-                    ViewAnimationUtils.createCircularReveal(view, cx, cy, endRadius, 0);
-
-            anim.addListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    super.onAnimationEnd(animation);
-                    dialog.dismiss();
-                    view.setVisibility(View.INVISIBLE);
-
-                }
-            });
-            anim.setDuration(700);
-            anim.start();
-        }
-
+        dialogSettings.show();
     }
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
@@ -452,17 +341,17 @@ public class NewActivity extends AppCompatActivity {
                     startPreview(surfaceView.getHolder());
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
                     lastPhotoTakenAtMilisTime = System.currentTimeMillis();
-                    int capturedPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
-                    updateUIphotosCaptured(capturedPhotos);
+                    currentTakenPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
+                    updateUIphotosCaptured();
                 }
             }
         }
     };
 
-    // stopPreview(), startCameraService(), bindToCameraService(), set 'isDoingTimelapse' flag, UI: change icon
+    // stopPreviewIfDoes(), startCameraService(), bindToCameraService(), set 'isDoingTimelapse' flag, UI: change icon
     private void startTimelapse(TimelapseConfig timelapseConfig) {
         this.timelapseConfig = timelapseConfig;
-        stopPreview();
+        stopPreviewIfDoes();
         startCameraService(timelapseConfig);
         bindToCameraService();
 
@@ -470,14 +359,10 @@ public class NewActivity extends AppCompatActivity {
         btnStartTimelapse.setImageResource(R.drawable.stop);
         statsPanel.setVisibility(View.VISIBLE);
 
-        // update UI statsPanel:
-        // private TextView webAccessTxt, intervalTxt, photosCapturedTxt, nextCaptureTxt, resolutionTxt;
-        webAccessTxt.setText("WebAccess:\nOffline");
-        intervalTxt.setText(String.format("Interval:\n%.02f", (float) (timelapseConfig.getMilisecondsInterval()/1000)));
-        updateUIphotosCaptured(0);
+        currentTakenPhotos = 0;
         lastPhotoTakenAtMilisTime = System.currentTimeMillis();
+        updateUIentire();
         startCountDownToNextPhoto();
-        resolutionTxt.setText(String.format("Resolution:\n%dx%d", timelapseConfig.getPictureSize().getWidth(), timelapseConfig.getPictureSize().getHeight()));
 
         Util.log("Started timelapse");
     }
@@ -498,7 +383,7 @@ public class NewActivity extends AppCompatActivity {
         }
         stopCameraService();
         isDoingTimelapse = false;
-
+        updateUIentire();
         Util.log("Trying to stop timelapse session");
     }
 
@@ -508,7 +393,7 @@ public class NewActivity extends AppCompatActivity {
             camera.prepare(NewActivity.this);
 //            Resolution[] sizes = camera.getSupportedPictureSizes();
 //            Resolution choosenSize = sizes[0];
-            pictureSize = choosenSize;
+//            pictureSize = choosenSize;
             camera.setOutputSize(choosenSize);
             surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
             camera.openForPreview(surfaceHolder);
@@ -517,7 +402,7 @@ public class NewActivity extends AppCompatActivity {
         }
     }
 
-    private void stopPreview() {
+    private void stopPreviewIfDoes() {
         if(surfaceHolderCallback != null)
             surfaceView.getHolder().removeCallback(surfaceHolderCallback);
 
@@ -571,6 +456,7 @@ public class NewActivity extends AppCompatActivity {
                     }
                 }
                 getSupportedResolutions();
+                updateUIentire();
             }
         }
     }

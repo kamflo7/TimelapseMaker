@@ -1,6 +1,15 @@
 <resources>
     <string name="app_name">TimelapseMaker</string>
     <string name="dialog_choose_resolution">Choose photo resolution</string>
-    <string name="dialog_choose_interval">Choose time interval</string>
+    <string name="dialog_choose_interval">Choose time interval (seconds)</string>
     <string name="dialog_choose_amount_photos">Limit photos</string>
+
+    <!-- DialogSettings descriptions (below TextView) -->
+    <string name="dialog_resolution_description">Current resolution is %1$dx%2$d</string>
+    <string name="dialog_interval_description">Each photo is captured every %1$s seconds</string>
+    <string name="dialog_photos_limit_description">It will capture %1$d photos</string>
+
+    <string name="text_enabled">Enabled</string>
+    <string name="text_disabled">Disabled</string>
+
 </resources>
