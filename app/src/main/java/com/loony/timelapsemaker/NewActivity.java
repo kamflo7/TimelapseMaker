@@ -29,6 +29,7 @@ import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 import com.loony.timelapsemaker.dialog_settings.DialogSettings;
+import com.loony.timelapsemaker.http_server.HttpService;
 
 public class NewActivity extends AppCompatActivity {
     public static final int REQUEST_PERMISSIONS = 0x1;
@@ -51,6 +52,11 @@ public class NewActivity extends AppCompatActivity {
     private CameraService cameraService;
     private ServiceConnection cameraConnection;
 
+    // http service
+    private boolean httpServiceBound;
+    private HttpService httpService;
+    private ServiceConnection httpConnection;
+
     private SurfaceHolder obtainedSurfaceHolder;
 
     // statsPanel vars
@@ -63,7 +69,9 @@ public class NewActivity extends AppCompatActivity {
     private Resolution choosenSize;
     private int intervalMiliseconds = 4000;
     private int amountOfPhotos = 20;
-    private boolean webEnabled = false;
+    private boolean webEnabled = true;
+
+    private boolean DEBUG_PREVIEW_CAMERA = false;
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -189,6 +197,10 @@ public class NewActivity extends AppCompatActivity {
             } else {
                 getSupportedResolutions();
                 updateUIentire();
+            }
+
+            if(Util.isMyServiceRunning(this, HttpService.class)) {
+                bindToHttpService();
             }
         }
     }
@@ -355,6 +367,11 @@ public class NewActivity extends AppCompatActivity {
         startCameraService(timelapseConfig);
         bindToCameraService();
 
+        if(webEnabled) {
+            startHttpService(timelapseConfig);
+            bindToHttpService();
+        }
+
         isDoingTimelapse = true;
         btnStartTimelapse.setImageResource(R.drawable.stop);
         statsPanel.setVisibility(View.VISIBLE);
@@ -382,12 +399,22 @@ public class NewActivity extends AppCompatActivity {
             // broadcast message about finishing timelapse, and that also calls stopTimelapse() where 'cameraServiceBound' is TRUE still! which provides to exceptions
         }
         stopCameraService();
+
+        if(httpServiceBound) {
+            unbindService(httpConnection);
+            httpServiceBound = false;
+        }
+        stopHttpService();
+
         isDoingTimelapse = false;
         updateUIentire();
         Util.log("Trying to stop timelapse session");
     }
 
     private void startPreview(SurfaceHolder surfaceHolder) {
+        if(!DEBUG_PREVIEW_CAMERA)
+            return;
+
         camera = Util.getAppropriateCamera();
         try {
             camera.prepare(NewActivity.this);
@@ -416,12 +443,18 @@ public class NewActivity extends AppCompatActivity {
         startService(intentCamera);
     }
 
+    private void startHttpService(TimelapseConfig timelapseConfig) {
+        Intent intentHttp = new Intent(this, HttpService.class);
+        intentHttp.putExtra(PARCEL_TIMELAPSE_CONFIG, timelapseConfig);
+        startService(intentHttp);
+    }
+
     private void bindToCameraService() {
         Intent intentCamera = new Intent(this, CameraService.class);
         cameraConnection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName componentName, IBinder service) {
-                Util.log("NewActivity::onServiceConnected() called");
+                Util.log("[CameraService] NewActivity::onServiceConnected() called");
                 CameraService.LocalBinder binder = (CameraService.LocalBinder) service;
                 cameraService = binder.getService();
                 cameraServiceBound = true;
@@ -429,7 +462,7 @@ public class NewActivity extends AppCompatActivity {
 
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
-                Util.log("NewActivity::onServiceDisconnected() called");
+                Util.log("[CameraService] NewActivity::onServiceDisconnected() called");
                 cameraServiceBound = false;
                 cameraService = null;
                 cameraConnection = null;
@@ -438,9 +471,37 @@ public class NewActivity extends AppCompatActivity {
         bindService(intentCamera, cameraConnection, 0);
     }
 
+    private void bindToHttpService() {
+        Intent intentHttp = new Intent(this, HttpService.class);
+        httpConnection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName componentName, IBinder service) {
+                Util.log("[HttpService] NewActivity::onServiceConnected() called");
+                HttpService.LocalBinder binder = (HttpService.LocalBinder) service;
+                httpService = binder.getService();
+                httpServiceBound = true;
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+                Util.log("[HttpService] NewActivity::onServiceDisconnected() called");
+                httpServiceBound = false;
+                httpService = null;
+                httpConnection = null;
+            }
+        };
+        bindService(intentHttp, httpConnection, 0);
+    }
+
     private void stopCameraService() {
         Intent intentCamera = new Intent(this, CameraService.class);
         stopService(intentCamera);
+    }
+
+    private void stopHttpService() {
+        Intent intentHttp = new Intent(this, HttpService.class);
+        stopService(intentHttp);
+        Util.log("~~HttpService stopped~~ (via NewActivity::stopHttpService)");
     }
 
     @Override
@@ -476,5 +537,10 @@ public class NewActivity extends AppCompatActivity {
 
         if(cameraServiceBound)
             unbindService(cameraConnection);
+
+        if(httpServiceBound) {
+            unbindService(httpConnection);
+            stopHttpService();
+        }
     }
 }
