@@ -55,18 +55,17 @@ public class StorageManager {
      * @return true if successfully saved, false if was any problem
      */
     public boolean saveImage(String directory, String imageName, byte[] imageBytes) {
-        Util.log("Saving image to storage... 1/2");
         File photo = new File(String.format("%s/%s.jpg", getPath(directory), imageName));
 
         try {
             FileOutputStream fos = new FileOutputStream(photo.getPath());
             fos.write(imageBytes);
             fos.close();
+            Util.log("StorageManager::savingImage to " + photo.getAbsolutePath());
         } catch(IOException e) {
             Util.log("StorageManager::saveImage() exception -> " + e.getMessage());
             return false;
         }
-        Util.log("Saving image to storage... 2/2");
         return true;
     }
 

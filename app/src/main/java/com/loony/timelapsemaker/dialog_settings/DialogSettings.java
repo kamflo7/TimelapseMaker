@@ -118,8 +118,8 @@ public class DialogSettings {
         options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()));
         options.add(new DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()));
         options.add(new DialogOption(R.drawable.ic_amount, "Limit", getPhotosLimitDescription()));
-        options.add(new DialogOption(R.drawable.ic_sd_storage, "Storage", "[Currently unavailable] Storage location for your timalapses"));
-        options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "[Currently unavailable] Access your timelapse progress through a website", DialogOption.Switch.DISABLED));
+        options.add(new DialogOption(R.drawable.ic_sd_storage, "Storage", "Storage location for your timalapses"));
+        options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website", DialogOption.Switch.DISABLED));
         final DialogSettingsAdapter adapter = new DialogSettingsAdapter(context, options);
         listView.setAdapter(adapter);
 

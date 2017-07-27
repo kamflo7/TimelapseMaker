@@ -1,0 +1,12 @@
+<resources>
+    <dimen name="dialog_navigation_width">50dp</dimen>
+    <dimen name="dialog_navigation_padding">3dp</dimen>
+
+    <dimen name="dialog_topbar_height">45dp</dimen>
+    <dimen name="dialog_topbar_textSize">18dp</dimen>
+
+    <dimen name="dialog_item_layoutHeight">45dp</dimen>
+    <dimen name="dialog_item_layoutPadding">2dp</dimen>
+    <dimen name="dialog_item_labelTop_textSize">17dp</dimen>
+    <dimen name="dialog_item_labelBottom_textSize">15dp</dimen>
+</resources>

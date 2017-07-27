@@ -6,11 +6,11 @@
     android:id="@+id/dialog">
     <LinearLayout
         android:id="@+id/navigation"
-        android:layout_width="80dp"
+        android:layout_width="@dimen/dialog_navigation_width"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:layout_alignParentLeft="true"
-        android:padding="8dp"
+        android:padding="@dimen/dialog_navigation_padding"
         android:background="#ffcb00"
         >
         <ImageButton
@@ -27,21 +27,21 @@
     <View
         android:background="#ffcb00"
         android:layout_height="match_parent"
-        android:layout_width="5dp"
+        android:layout_width="2dp"
         android:id="@+id/divider"
         android:layout_toRightOf="@+id/navigation"
         />
     <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="@dimen/dialog_topbar_height"
         android:layout_toRightOf="@+id/divider"
         android:background="#ffcb00"
         android:id="@+id/topBar">
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Timelapse settings"
-            android:textSize="34dp"
+            android:text="@string/test_multiscreen"
+            android:textSize="@dimen/dialog_topbar_textSize"
             android:layout_centerVertical="true"
             android:textColor="#040000"
             android:layout_marginLeft="5dp"
