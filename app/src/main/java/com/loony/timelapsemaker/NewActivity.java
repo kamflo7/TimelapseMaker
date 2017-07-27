@@ -391,11 +391,9 @@ public class NewActivity extends AppCompatActivity {
         camera = Util.getAppropriateCamera();
         try {
             camera.prepare(NewActivity.this);
-//            Resolution[] sizes = camera.getSupportedPictureSizes();
-//            Resolution choosenSize = sizes[0];
-//            pictureSize = choosenSize;
+            Util.log("startPreview with resolution " + choosenSize.getWidth() + "x" + choosenSize.getHeight());
             camera.setOutputSize(choosenSize);
-            surfaceView.getHolder().setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
+            surfaceHolder.setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
             camera.openForPreview(surfaceHolder);
         } catch (CameraNotAvailableException e) {
             e.printStackTrace();
