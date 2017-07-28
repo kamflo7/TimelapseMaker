@@ -1,12 +1,134 @@
 <html>
 	<head>
 		<title>TimelapseMaker HTTP Server v2</title>
+		
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		
 		<link rel="icon" href="favicon.ico" type="image/x-icon"/>
 		<link rel="stylesheet" type="text/css" href="style.css">
+		<link rel="stylesheet" href="bootstrap.min.css">
+		<script src="jquery.min.js"></script>
+		<script src="bootstrap.min.js"></script>
+		
 		<script type="text/javascript" src="script.js"></script>
+		
+		<style>
+		body {
+			background-color: #f1f1f1;
+		}
+		
+		@media (min-width: 0px) and (max-width: 767px) {
+			.firstElement {
+				margin-top: 20px;
+			}
+		}
+		</style>
 	</head>
 	<body>
-		<h1>Hello world!</h1>
-		<img src="camera.png" />
+		<nav class="navbar navbar-inverse">
+		
+		  <div class="container">
+			<div class="navbar-header">
+			  <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#myNavbar">
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>
+				<span class="icon-bar"></span>                        
+			  </button>
+			  <img src="my_icon.png" height="50" />
+			  <span style="color: white; margin-right: 50px">TimelapseMaker v2</span>
+			</div>
+			<div class="collapse navbar-collapse" id="myNavbar">
+			  <ul class="nav navbar-nav">
+				<li class="active"><a href="#">Preview</a></li>
+				<!--<li><a href="#">Gallery</a></li>-->
+			  </ul>
+			  <!--<ul class="nav navbar-nav navbar-right">
+				<li><a href="#"><span class="glyphicon glyphicon-log-in"></span> Login</a></li>
+			  </ul>-->
+			</div>
+		  </div>
+		</nav>
+		
+		<div class="container">
+			<div class="row">
+				<div class="col-sm-7">
+					<img src="img.jpg" class="img-responsive img-thumbnail" />
+				</div>
+				<div class="col-sm-5">
+				
+					<div class="row firstElement">
+						<div class="col-xs-3">
+							TimelapseID:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="timelapseid">20170728_174903</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-3">
+							Resolution:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="resolution">3264x1836</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-3">
+							Interval:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="interval">5s</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-3">
+							Captured:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="captured">2 of 650 photos</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-3">
+							Next photo in:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="nextPhotoIn">7s</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-3">
+							Battery:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="battery">85%</span>
+						</div>
+					</div>
+					<div class="row">
+						<div class="col-xs-3">
+							Watchers:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<span id="watchers">1</span>
+						</div>
+					</div>
+	
+					<div class="row">
+						<div class="col-xs-3">
+							Progress:
+						</div>
+						<div class="col-xs-8 col-xs-offset-1">
+							<div class="progress">
+							  <div id="timelapseProgress" class="progress-bar progress-bar-striped active" role="progressbar" aria-valuenow="0"
+							  aria-valuemin="0" aria-valuemax="100" style="width:0%">
+								0%
+							  </div>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</div>
+		</div>
 	</body>
 </html>

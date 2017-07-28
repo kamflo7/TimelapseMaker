@@ -33,7 +33,7 @@ public class HttpServer extends NanoHTTPD {
         //printSession(session);
 
         if(!isAuthorized(session)) {
-            Response response = newFixedLengthResponse(Response.Status.UNAUTHORIZED, MIME_PLAINTEXT, "Need authentication");
+            Response response = newFixedLengthResponse(Response.Status.UNAUTHORIZED, MIME_PLAINTEXT, "Needs authentication");
             response.addHeader("WWW-Authenticate", "Basic realm=\"TimelapseMaker\"");
             return response;
         }
