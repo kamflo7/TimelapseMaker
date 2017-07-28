@@ -72,6 +72,7 @@ public class NewActivity extends AppCompatActivity {
     private boolean webEnabled = true;
 
     private boolean DEBUG_PREVIEW_CAMERA = false;
+    private boolean DEBUG_cameraServiceOnInStartTimelapse = false;
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -364,8 +365,11 @@ public class NewActivity extends AppCompatActivity {
     private void startTimelapse(TimelapseConfig timelapseConfig) {
         this.timelapseConfig = timelapseConfig;
         stopPreviewIfDoes();
-        startCameraService(timelapseConfig);
-        bindToCameraService();
+
+        if(DEBUG_cameraServiceOnInStartTimelapse) {
+            startCameraService(timelapseConfig);
+            bindToCameraService();
+        }
 
         if(webEnabled) {
             startHttpService(timelapseConfig);

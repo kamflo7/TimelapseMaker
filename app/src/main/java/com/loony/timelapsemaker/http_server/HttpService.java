@@ -3,12 +3,16 @@ package com.loony.timelapsemaker.http_server;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.support.annotation.IntDef;
 import android.support.annotation.Nullable;
 
 import com.loony.timelapsemaker.Util;
 import com.loony.timelapsemaker.camera.CameraService;
+
+import java.io.IOException;
 
 /**
  * Created by Kamil on 7/27/2017.
@@ -17,7 +21,7 @@ import com.loony.timelapsemaker.camera.CameraService;
 public class HttpService extends Service {
 
     private final IBinder mBinder = new HttpService.LocalBinder();
-
+    private HttpServer server;
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -28,6 +32,13 @@ public class HttpService extends Service {
         }
 
         Util.log("~~HttpService started!~~");
+
+        server = new HttpServer(getApplicationContext(), 9090);
+        try {
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
 
         return super.onStartCommand(intent, flags, startId);
     }
@@ -45,12 +56,27 @@ public class HttpService extends Service {
 
     @Override
     public void onDestroy() {
+        if(server != null)
+            server.stop();
+
         super.onDestroy();
     }
 
     public class LocalBinder extends Binder {
         public HttpService getService() {
             return HttpService.this;
+        }
+    }
+
+    private class Worker extends HandlerThread {
+        public Handler handler;
+
+        public Worker(String name) {
+            super(name);
+        }
+
+        public synchronized void waitUntilReady() {
+            handler = new Handler(getLooper());
         }
     }
 }
