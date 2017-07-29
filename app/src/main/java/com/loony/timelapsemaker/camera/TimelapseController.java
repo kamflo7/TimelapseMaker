@@ -51,6 +51,8 @@ public class TimelapseController {
             return;
         }
 
+        this.onTimelapseStateChangeListener.onInit(directoryForPhotos);
+
         powerManager = (PowerManager) context.getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "myWakeLockTag");
         wakeLock.acquire();

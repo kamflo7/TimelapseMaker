@@ -30,6 +30,7 @@ public class Util {
     public static final String BROADCAST_FILTER = "com.loony.timelapsemaker.camera.CameraService";
     public static final String BROADCAST_MESSAGE = "action";
 
+    public static final String BROADCAST_MESSAGE_INIT_TIMELAPSE_CONTROLLER = "initControllerTimelapse";
     public static final String BROADCAST_MESSAGE_FINISHED = "finished";
     public static final String BROADCAST_MESSAGE_FINISHED_FAILED = "finishedWithFail";
 

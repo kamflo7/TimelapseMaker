@@ -1,8 +1,14 @@
 var setTimelapseID, setResolution, setInterval, setCaptured,
 	setNextPhotoTime, setBattery, setWatchers, setProgress;
 var clearUIData;
-//var requestImage;
 var requestData;
+
+var getBaseHref;
+var port = 9090;
+
+var requestTryCount = 0;
+var unixTimeWhenGotPhoto;
+var lastTimeToNextCaptureMs;
 
 $(document).ready(function() {
 	setTimelapseID 	=	function(id="Unknow") 		{	$("#timelapseid").text(id);	}
@@ -31,45 +37,64 @@ $(document).ready(function() {
 		setProgress(0);
 	}
 	
-	/*requestImage = function() { //#outputImage
-		$.ajax({
-			url: 'http://192.168.1.35:9090/getImage',
-			success: function(r) {
-				console.log("AJAX SUCCESS, data: " + r);
-				
-				var json = JSON.parse(r);
-				
-				$("#outputImage").attr("src", "data:image/png;base64,"
-					+ json.image);
-			}
-		});
-	}*/
+	getBaseHref = function() {
+		return "http://" + window.location.hostname + ":"+port+"/";
+	}
 	
 	requestData = function() {
 		$.ajax({
-			url: 'http://192.168.1.35:9090/getData',
+			url: getBaseHref()+'getData',
 			success: function(r) {
-				console.log("[AJAX: /getData/], result: " + JSON.stringify(r));
+				//console.log("[AJAX: /getData/], result: " + JSON.stringify(r));
+				$("#warningAlert").css("display", "none");
+				requestTryCount = 0;
 				
 				var json = JSON.parse(r);
-				
 				
 				setResolution(json.resolution);
 				setInterval(json.intervalMiliseconds / 1000);
 				setCaptured(json.capturedPhotos, json.maxPhotos);
 				setProgress((json.capturedPhotos / json.maxPhotos) * 100);
+				setBattery(parseFloat(json.battery_level) + "%");
+				setTimelapseID(json.timelapseID);
+				port = json.app_port;
 				
 				$("#outputImage").attr("src", "data:image/png;base64,"
 					+ json.image);
 				
-				//setTimelapseID
-				//setBattery
 				//setWatchers
-				//call setTimeout with received 'timeMsToNextCapture'
-				//generally do another setTimeout to refresh time to next capture, not here
+				
+				unixTimeWhenGotPhoto = new Date().getTime();
+				lastTimeToNextCaptureMs = parseInt(json.timeMsToNextCapture);
+				//console.log("Obtained JSON.timeMsToNextCapture:" + lastTimeToNextCaptureMs);
+				var timeToNextCall = lastTimeToNextCaptureMs > 0 ? (lastTimeToNextCaptureMs + 500) : json.intervalMiliseconds;
+				
+				setTimeout(function() { requestData(); }, timeToNextCall);
+			},
+			error: function(xhr, ajaxOptions, thrownError) {
+				requestTryCount++;
+				setTimeout(function() { requestData(); }, 5000);
+				
+				$("#warningAlert").css("display", "block");
+				$("#warningText").text("Request does not respond! We will try again in few seconds." + (requestTryCount >= 2 ? (" ["+requestTryCount+"]") : ""));
 			}
 		});
 	}
 	
 	clearUIData();
+	setTimeout(function() {
+		requestData();
+	}, 700);
+	
+		
+	var refreshTimeToNextPhoto = function() {
+		var diff = lastTimeToNextCaptureMs - (new Date().getTime() - unixTimeWhenGotPhoto);
+		//console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
+		if(diff < 0) diff = 0;
+		
+		setNextPhotoTime(parseInt(diff/1000) + "s");
+		setTimeout(refreshTimeToNextPhoto, 500);
+	}
+	
+	setTimeout(refreshTimeToNextPhoto, 500);
 });

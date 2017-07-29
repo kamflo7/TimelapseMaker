@@ -39,21 +39,28 @@ public class HttpServer extends NanoHTTPD {
     private static final String PASSWORD = "Basic YWRtaW46YmFyeWxvaw==";
 
     private Context context;
+    private final int port;
 
     // dispatch values
     private String base64image = null;
-//    private JSONObject dataJson = null;
-
+    private String timelapseID = "unknow";
     private Resolution resolution;
     private int intervalMilisecond;
     private int capturedPhotos;
     private int maxPhotos;
 
     private long timeOfLastPhotoCapture;
+    private enum Status {
+        DOING,
+        FINISHED,
+        FINISHED_FAILED
+    };
+    private Status status = Status.DOING;
 
     public HttpServer(Context context, int port, TimelapseConfig timelapseConfig) {
         super(port);
         this.context = context;
+        this.port = port;
 //        makeBase64image(testLoadImageFromDisk());
         //Util.log("TestBufferSize: " + (testImgBuffer != null ? testImgBuffer.length : "null"));
         Util.log("HttpServer::__construct IP: " + Util.getLocalIpAddress(true) + ":"+port);
@@ -63,46 +70,15 @@ public class HttpServer extends NanoHTTPD {
         maxPhotos = timelapseConfig.getPhotosLimit();
     }
 
-//    private byte[] testLoadImageFromDisk() {
-//        InputStream is = null;
-//        byte[] buffer = null;
-//        try {
-//            is = context.getAssets().open("toSend.jpg");
-//            buffer = new byte[is.available()];
-//            is.read(buffer);
-//            is.close();
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
-//
-//        return buffer;
-//    }
-
     private void makeBase64image(byte[] sourceBytes) {
         Bitmap bm = BitmapFactory.decodeByteArray(sourceBytes, 0, sourceBytes.length);
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         bm.compress(Bitmap.CompressFormat.JPEG, 60, outputStream);
         byte[] b = outputStream.toByteArray();
 
-        //JSONObject o = new JSONObject();
-        //o.put("image", Base64.encodeToString(b, Base64.NO_WRAP));
-//            base64image = o.toString();
         base64image = Base64.encodeToString(b, Base64.NO_WRAP);
-
-        Util.log("Made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%", (int) (sourceBytes.length/1024f), (int) (b.length/1024f), ((sourceBytes.length-b.length)/(float) sourceBytes.length)*100f);
+        //Util.log("Made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%", (int) (sourceBytes.length/1024f), (int) (b.length/1024f), ((sourceBytes.length-b.length)/(float) sourceBytes.length)*100f);
     }
-
-//    private void makeJsonData() {
-//        dataJson = new JSONObject();
-//        try {
-//            dataJson.put("resolution", resolution != null ? (String.format("%dx%d", resolution.getWidth(), resolution.getHeight())) : "unknow");
-//            dataJson.put("intervalMiliseconds", intervalMilisecond);
-//            dataJson.put("capturedPhotos", capturedPhotos);
-//            dataJson.put("maxPhotos", maxPhotos);
-//        } catch (JSONException e) {
-//            e.printStackTrace();
-//        }
-//    }
 
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
@@ -116,6 +92,13 @@ public class HttpServer extends NanoHTTPD {
                     timeOfLastPhotoCapture = System.currentTimeMillis();
                     byte[] image = intent.getByteArrayExtra("imageBytes");
                     makeBase64image(image);
+                } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED)) {
+                    capturedPhotos++;
+                    status = Status.FINISHED;
+                } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
+                    status = Status.FINISHED_FAILED;
+                } else if(msg.equals(Util.BROADCAST_MESSAGE_INIT_TIMELAPSE_CONTROLLER)) {
+                    timelapseID = intent.getStringExtra("timelapseDirectory");
                 }
             }
         }
@@ -158,12 +141,17 @@ public class HttpServer extends NanoHTTPD {
         JSONObject dataJson = new JSONObject();
 
         try {
-            dataJson.put("resolution", resolution != null ? (String.format("%dx%d", resolution.getWidth(), resolution.getHeight())) : "unknow")
+            dataJson.put("success", "true")
+                    .put("app_port", port)
+                    .put("timelapseID", timelapseID)
+                    .put("battery_level", Util.getBatteryLevel(context))
+                    .put("resolution", resolution != null ? (String.format("%dx%d", resolution.getWidth(), resolution.getHeight())) : "unknow")
                     .put("intervalMiliseconds", intervalMilisecond)
                     .put("capturedPhotos", capturedPhotos)
                     .put("maxPhotos", maxPhotos)
                     .put("timeMsToNextCapture", intervalMilisecond - (System.currentTimeMillis() - timeOfLastPhotoCapture))
-                    .put("image", base64image);
+                    .put("image", base64image)
+                    .put("timelapseStatus", status == Status.DOING ? "doing" : (status == Status.FINISHED ? "finished" : "failed"));
         } catch (JSONException e) {
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
         }

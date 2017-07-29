@@ -74,6 +74,13 @@ public class CameraService extends Service {
                     timelapseController = new TimelapseController(getApplicationContext(), timelapseConfig);
                     timelapseController.start(new OnTimelapseStateChangeListener() {
                         @Override
+                        public void onInit(String timelapseDirectory) {
+                            Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_INIT_TIMELAPSE_CONTROLLER);
+                            i.putExtra("timelapseDirectory", timelapseDirectory);
+                            LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+                        }
+
+                        @Override
                         public void onComplete() {
                             Util.log("CameraService::onComplete");
                             timelapseState = TimelapseState.FINISHED;
