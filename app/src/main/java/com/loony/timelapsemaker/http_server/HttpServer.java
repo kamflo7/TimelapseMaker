@@ -1,10 +1,19 @@
 package com.loony.timelapsemaker.http_server;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
 
 import com.loony.timelapsemaker.Util;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -22,10 +31,41 @@ public class HttpServer extends NanoHTTPD {
 
     private Context context;
 
+    private String base64image = null;
+
     public HttpServer(Context context, int port) {
         super(port);
         this.context = context;
+        makeBase64fromBytes();
+        //Util.log("TestBufferSize: " + (testImgBuffer != null ? testImgBuffer.length : "null"));
         Util.log("HttpServer::__construct IP: " + Util.getLocalIpAddress(true) + ":"+port);
+    }
+
+    private void makeBase64fromBytes() {
+        try {
+            InputStream is = context.getAssets().open("toSend.jpg");
+            byte[] testImgBuffer = new byte[is.available()];
+            is.read(testImgBuffer);
+            is.close();
+
+            Bitmap bm = BitmapFactory.decodeByteArray(testImgBuffer, 0, testImgBuffer.length);
+            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+            bm.compress(Bitmap.CompressFormat.JPEG, 60, outputStream);
+            byte[] b = outputStream.toByteArray();
+
+            JSONObject o = new JSONObject();
+            o.put("image", Base64.encodeToString(b, Base64.NO_WRAP));
+
+            base64image = o.toString();
+
+            Util.log("made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%", (int) (testImgBuffer.length/1024f), (int) (b.length/1024f), ((testImgBuffer.length-b.length)/(float) testImgBuffer.length)*100f);
+        } catch (IOException e) {
+            e.printStackTrace();
+            base64image = null;
+        } catch (JSONException e) {
+            e.printStackTrace();
+            base64image = null;
+        }
     }
 
     @Override
@@ -51,10 +91,19 @@ public class HttpServer extends NanoHTTPD {
             return serveInputStream(session, "text/css");
         } else if(uri.contains(".js")) {
             return serveInputStream(session, "text/javascript");
+        } else if(uri.equals("/getImage")) {
+            return serveCapturedImage();
         }
 
 
         return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Page not found");
+    }
+
+    private Response serveCapturedImage() {
+        if(base64image == null)
+            return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
+
+        return newFixedLengthResponse(base64image);
     }
 
     private Response serveInputStream(IHTTPSession session, String mimeType) {

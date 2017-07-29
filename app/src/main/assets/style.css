@@ -1,7 +1,15 @@
-body {
-	background-color: #cccccc;
-}
 
 h1 {
 	color: blue;
+}
+
+body {
+	/*background-color: #f1f1f1;*/
+	background-color: #cccccc;
+}
+
+@media (min-width: 0px) and (max-width: 767px) {
+	.firstElement {
+		margin-top: 20px;
+	}
 }
