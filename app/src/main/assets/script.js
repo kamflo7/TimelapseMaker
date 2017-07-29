@@ -69,7 +69,9 @@ $(document).ready(function() {
 				//console.log("Obtained JSON.timeMsToNextCapture:" + lastTimeToNextCaptureMs);
 				var timeToNextCall = lastTimeToNextCaptureMs > 0 ? (lastTimeToNextCaptureMs + 500) : json.intervalMiliseconds;
 				
-				setTimeout(function() { requestData(); }, timeToNextCall);
+				
+				if(json.timelapseStatus == "doing")
+					setTimeout(function() { requestData(); }, timeToNextCall);
 			},
 			error: function(xhr, ajaxOptions, thrownError) {
 				requestTryCount++;
@@ -89,7 +91,7 @@ $(document).ready(function() {
 		
 	var refreshTimeToNextPhoto = function() {
 		var diff = lastTimeToNextCaptureMs - (new Date().getTime() - unixTimeWhenGotPhoto);
-		//console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
+		console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
 		if(diff < 0) diff = 0;
 		
 		setNextPhotoTime(parseInt(diff/1000) + "s");

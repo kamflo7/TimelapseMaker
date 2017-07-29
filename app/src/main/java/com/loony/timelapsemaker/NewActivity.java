@@ -7,6 +7,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -355,7 +359,19 @@ public class NewActivity extends AppCompatActivity {
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
                     lastPhotoTakenAtMilisTime = System.currentTimeMillis();
                     currentTakenPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
+                    byte[] lastImg = intent.getByteArrayExtra("imageBytes");
                     updateUIphotosCaptured();
+
+                    Canvas c = obtainedSurfaceHolder.lockCanvas();
+                    if(c != null) {
+                        Util.log("It should render bitmap");
+                        Bitmap bitmap = BitmapFactory.decodeByteArray(lastImg, 0, lastImg.length);
+//                        c.drawBitmap(bitmap, 0, 0, null);
+//                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, 854, 480), null);
+//                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, surfaceView.getWidth(), surfaceView.getHeight(), true);
+//                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, surfaceView.getWidth(), surfaceView.getHeight()), null);
+                        obtainedSurfaceHolder.unlockCanvasAndPost(c);
+                    }
                 }
             }
         }
