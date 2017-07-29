@@ -72,7 +72,7 @@ public class NewActivity extends AppCompatActivity {
     private boolean webEnabled = true;
 
     private boolean DEBUG_PREVIEW_CAMERA = false;
-    private boolean DEBUG_cameraServiceOnInStartTimelapse = false;
+    private boolean DEBUG_cameraServiceOnInStartTimelapse = true;
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");

@@ -9,8 +9,10 @@ import android.os.IBinder;
 import android.support.annotation.IntDef;
 import android.support.annotation.Nullable;
 
+import com.loony.timelapsemaker.NewActivity;
 import com.loony.timelapsemaker.Util;
 import com.loony.timelapsemaker.camera.CameraService;
+import com.loony.timelapsemaker.camera.TimelapseConfig;
 
 import java.io.IOException;
 
@@ -33,7 +35,9 @@ public class HttpService extends Service {
 
         Util.log("~~HttpService started!~~");
 
-        server = new HttpServer(getApplicationContext(), 9090);
+        TimelapseConfig timelapseConfig = intent.getExtras().getParcelable(NewActivity.PARCEL_TIMELAPSE_CONFIG);
+
+        server = new HttpServer(getApplicationContext(), 9090, timelapseConfig);
         try {
             server.start();
         } catch (IOException e) {

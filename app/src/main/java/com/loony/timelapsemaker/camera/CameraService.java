@@ -91,9 +91,10 @@ public class CameraService extends Service {
                         }
 
                         @Override
-                        public void onProgress(int capturedPhotos) {
+                        public void onProgress(int capturedPhotos, byte[] capturedImage) {
                             Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO);
                             i.putExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, capturedPhotos);
+                            i.putExtra("imageBytes", capturedImage);
                             LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
                         }
                     });

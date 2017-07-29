@@ -1,11 +1,19 @@
 package com.loony.timelapsemaker.http_server;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Base64;
+import android.widget.Toast;
 
+import com.loony.timelapsemaker.NewActivity;
 import com.loony.timelapsemaker.Util;
+import com.loony.timelapsemaker.camera.Resolution;
+import com.loony.timelapsemaker.camera.TimelapseConfig;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -26,47 +34,92 @@ import fi.iki.elonen.NanoHTTPD;
  */
 
 public class HttpServer extends NanoHTTPD {
+//    private static String BROADCAST_FILTER
     private static String HTTP_AUTHORIZATION = "authorization";
     private static final String PASSWORD = "Basic YWRtaW46YmFyeWxvaw==";
 
     private Context context;
 
+    // dispatch values
     private String base64image = null;
+//    private JSONObject dataJson = null;
 
-    public HttpServer(Context context, int port) {
+    private Resolution resolution;
+    private int intervalMilisecond;
+    private int capturedPhotos;
+    private int maxPhotos;
+
+    private long timeOfLastPhotoCapture;
+
+    public HttpServer(Context context, int port, TimelapseConfig timelapseConfig) {
         super(port);
         this.context = context;
-        makeBase64fromBytes();
+//        makeBase64image(testLoadImageFromDisk());
         //Util.log("TestBufferSize: " + (testImgBuffer != null ? testImgBuffer.length : "null"));
         Util.log("HttpServer::__construct IP: " + Util.getLocalIpAddress(true) + ":"+port);
+        LocalBroadcastManager.getInstance(context).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
+        resolution = timelapseConfig.getPictureSize();
+        intervalMilisecond = (int) timelapseConfig.getMilisecondsInterval();
+        maxPhotos = timelapseConfig.getPhotosLimit();
     }
 
-    private void makeBase64fromBytes() {
-        try {
-            InputStream is = context.getAssets().open("toSend.jpg");
-            byte[] testImgBuffer = new byte[is.available()];
-            is.read(testImgBuffer);
-            is.close();
+//    private byte[] testLoadImageFromDisk() {
+//        InputStream is = null;
+//        byte[] buffer = null;
+//        try {
+//            is = context.getAssets().open("toSend.jpg");
+//            buffer = new byte[is.available()];
+//            is.read(buffer);
+//            is.close();
+//        } catch (IOException e) {
+//            e.printStackTrace();
+//        }
+//
+//        return buffer;
+//    }
 
-            Bitmap bm = BitmapFactory.decodeByteArray(testImgBuffer, 0, testImgBuffer.length);
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-            bm.compress(Bitmap.CompressFormat.JPEG, 60, outputStream);
-            byte[] b = outputStream.toByteArray();
+    private void makeBase64image(byte[] sourceBytes) {
+        Bitmap bm = BitmapFactory.decodeByteArray(sourceBytes, 0, sourceBytes.length);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        bm.compress(Bitmap.CompressFormat.JPEG, 60, outputStream);
+        byte[] b = outputStream.toByteArray();
 
-            JSONObject o = new JSONObject();
-            o.put("image", Base64.encodeToString(b, Base64.NO_WRAP));
+        //JSONObject o = new JSONObject();
+        //o.put("image", Base64.encodeToString(b, Base64.NO_WRAP));
+//            base64image = o.toString();
+        base64image = Base64.encodeToString(b, Base64.NO_WRAP);
 
-            base64image = o.toString();
+        Util.log("Made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%", (int) (sourceBytes.length/1024f), (int) (b.length/1024f), ((sourceBytes.length-b.length)/(float) sourceBytes.length)*100f);
+    }
 
-            Util.log("made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%", (int) (testImgBuffer.length/1024f), (int) (b.length/1024f), ((testImgBuffer.length-b.length)/(float) testImgBuffer.length)*100f);
-        } catch (IOException e) {
-            e.printStackTrace();
-            base64image = null;
-        } catch (JSONException e) {
-            e.printStackTrace();
-            base64image = null;
+//    private void makeJsonData() {
+//        dataJson = new JSONObject();
+//        try {
+//            dataJson.put("resolution", resolution != null ? (String.format("%dx%d", resolution.getWidth(), resolution.getHeight())) : "unknow");
+//            dataJson.put("intervalMiliseconds", intervalMilisecond);
+//            dataJson.put("capturedPhotos", capturedPhotos);
+//            dataJson.put("maxPhotos", maxPhotos);
+//        } catch (JSONException e) {
+//            e.printStackTrace();
+//        }
+//    }
+
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String msg = intent.getStringExtra(Util.BROADCAST_MESSAGE);
+            if(msg != null) {
+                if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
+                    Util.log("HttpServer::Broadcast received a message");
+//                    lastPhotoTakenAtMilisTime = System.currentTimeMillis();
+                    capturedPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
+                    timeOfLastPhotoCapture = System.currentTimeMillis();
+                    byte[] image = intent.getByteArrayExtra("imageBytes");
+                    makeBase64image(image);
+                }
+            }
         }
-    }
+    };
 
     @Override
     public Response serve(IHTTPSession session) {
@@ -93,10 +146,33 @@ public class HttpServer extends NanoHTTPD {
             return serveInputStream(session, "text/javascript");
         } else if(uri.equals("/getImage")) {
             return serveCapturedImage();
+        } else if(uri.equals("/getData")) {
+            return serveData();
         }
 
 
         return newFixedLengthResponse(Response.Status.NOT_FOUND, MIME_PLAINTEXT, "Page not found");
+    }
+
+    private Response serveData() {
+        JSONObject dataJson = new JSONObject();
+
+        try {
+            dataJson.put("resolution", resolution != null ? (String.format("%dx%d", resolution.getWidth(), resolution.getHeight())) : "unknow")
+                    .put("intervalMiliseconds", intervalMilisecond)
+                    .put("capturedPhotos", capturedPhotos)
+                    .put("maxPhotos", maxPhotos)
+                    .put("timeMsToNextCapture", intervalMilisecond - (System.currentTimeMillis() - timeOfLastPhotoCapture))
+                    .put("image", base64image);
+        } catch (JSONException e) {
+            return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
+        }
+
+
+        String response = dataJson.toString();
+
+        Util.log("Someone is requesting data, data: " + response);
+        return newFixedLengthResponse(response);
     }
 
     private Response serveCapturedImage() {
@@ -164,5 +240,11 @@ public class HttpServer extends NanoHTTPD {
         out += String.format("\"uri\": \"%s\",", uri);
         out += String.format("\"method\": \"%s\"}", method);
         Util.log("printSession -> " + out);
+    }
+
+    private Intent getSendingMessageIntent(String message) {
+        Intent intent = new Intent(Util.BROADCAST_FILTER);
+        intent.putExtra(Util.BROADCAST_MESSAGE, message);
+        return intent;
     }
 }
