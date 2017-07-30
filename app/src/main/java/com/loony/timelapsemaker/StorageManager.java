@@ -55,6 +55,9 @@ public class StorageManager {
      * @return true if successfully saved, false if was any problem
      */
     public boolean saveImage(String directory, String imageName, byte[] imageBytes) {
+        if(NewActivity.DEBUG_DO_NOT_SAVE_IMAGE_IN_STORAGE)
+            return true;
+
         File photo = new File(String.format("%s/%s.jpg", getPath(directory), imageName));
 
         try {

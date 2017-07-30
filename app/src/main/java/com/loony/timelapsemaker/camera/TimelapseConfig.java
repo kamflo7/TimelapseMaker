@@ -11,6 +11,7 @@ public class TimelapseConfig implements Parcelable {
     private long milisecondsInterval;
     private int photosLimit;
     private Resolution pictureSize;
+    private CameraVersion cameraApiVersion;
 
     public TimelapseConfig() {}
 
@@ -31,10 +32,6 @@ public class TimelapseConfig implements Parcelable {
         this.pictureSize = resolution;
     }
 
-    /*public void setPictureSize(int width, int height) {
-        setPictureSize(new Resolution(width, height));
-    }*/
-
     public Resolution getPictureSize() {
         return pictureSize;
     }
@@ -47,6 +44,13 @@ public class TimelapseConfig implements Parcelable {
         return this.photosLimit;
     }
 
+    public CameraVersion getCameraApiVersion() {
+        return cameraApiVersion;
+    }
+
+    public void setCameraApiVersion(CameraVersion cameraApiVersion) {
+        this.cameraApiVersion = cameraApiVersion;
+    }
 
     // parcelable:
     @Override
@@ -59,6 +63,7 @@ public class TimelapseConfig implements Parcelable {
         milisecondsInterval = in.readLong();
         photosLimit = in.readInt();
         pictureSize = new Resolution(in.readInt(), in.readInt());
+        cameraApiVersion = in.readInt() == 1 ? CameraVersion.API_1 : CameraVersion.API_2;
     }
 
     @Override
@@ -67,6 +72,7 @@ public class TimelapseConfig implements Parcelable {
         dest.writeInt(photosLimit);
         dest.writeInt(pictureSize.getWidth());
         dest.writeInt(pictureSize.getHeight());
+        dest.writeInt(cameraApiVersion == CameraVersion.API_1 ? 1 : 2);
     }
 
     public static final Parcelable.Creator CREATOR = new Parcelable.Creator() {

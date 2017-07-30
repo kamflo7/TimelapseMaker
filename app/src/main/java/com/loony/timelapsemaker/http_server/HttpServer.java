@@ -6,12 +6,15 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Base64;
 import android.widget.Toast;
 
+import com.loony.timelapsemaker.MySharedPreferences;
 import com.loony.timelapsemaker.NewActivity;
 import com.loony.timelapsemaker.Util;
+import com.loony.timelapsemaker.camera.CameraVersion;
 import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 
@@ -36,7 +39,8 @@ import fi.iki.elonen.NanoHTTPD;
 public class HttpServer extends NanoHTTPD {
 //    private static String BROADCAST_FILTER
     private static String HTTP_AUTHORIZATION = "authorization";
-    private static final String PASSWORD = "Basic YWRtaW46YmFyeWxvaw==";
+//    private static final String PASSWORD = "Basic YWRtaW46YmFyeWxvaw==";
+    private String password;
 
     private Context context;
     private final int port;
@@ -48,6 +52,7 @@ public class HttpServer extends NanoHTTPD {
     private int intervalMilisecond;
     private int capturedPhotos;
     private int maxPhotos;
+    private CameraVersion cameraVesion;
 
     private long timeOfLastPhotoCapture;
     private enum Status {
@@ -68,6 +73,11 @@ public class HttpServer extends NanoHTTPD {
         resolution = timelapseConfig.getPictureSize();
         intervalMilisecond = (int) timelapseConfig.getMilisecondsInterval();
         maxPhotos = timelapseConfig.getPhotosLimit();
+        cameraVesion = timelapseConfig.getCameraApiVersion();
+
+        MySharedPreferences p = new MySharedPreferences(context);
+        password = p.readWebPassword();
+        Util.log("[HttpServer] read password '%s'", password);
     }
 
     private void makeBase64image(byte[] sourceBytes) {
@@ -140,11 +150,16 @@ public class HttpServer extends NanoHTTPD {
     private Response serveData() {
         JSONObject dataJson = new JSONObject();
 
+
+        // android.os.Build.MODEL;  android.os.Build.MANUFACTURER   android.os.Build.PRODUCT
         try {
             dataJson.put("success", "true")
                     .put("app_port", port)
                     .put("timelapseID", timelapseID)
                     .put("battery_level", Util.getBatteryLevel(context))
+                    .put("device_name", Build.MANUFACTURER + " " + Build.MODEL)
+                    .put("android_version", Build.VERSION.RELEASE)
+                    .put("camera_api", cameraVesion == CameraVersion.API_1 ? 1 : 2)
                     .put("resolution", resolution != null ? (String.format("%dx%d", resolution.getWidth(), resolution.getHeight())) : "unknow")
                     .put("intervalMiliseconds", intervalMilisecond)
                     .put("capturedPhotos", capturedPhotos)
@@ -195,8 +210,10 @@ public class HttpServer extends NanoHTTPD {
 
     private boolean isAuthorized(IHTTPSession session) {
         Map<String, String> headers = session.getHeaders();
-        if(headers.containsKey(HTTP_AUTHORIZATION) && headers.get(HTTP_AUTHORIZATION).equals(PASSWORD))
+        if(headers.containsKey(HTTP_AUTHORIZATION) && headers.get(HTTP_AUTHORIZATION).equals(password))
             return true;
+
+//        Util.log("[isAuthorized] http_auth -> '%s'", headers.get(HTTP_AUTHORIZATION));
 
         return false;
     }

@@ -35,7 +35,7 @@ public class DialogSettingsAdapter extends ArrayAdapter<DialogOption> {
     @NonNull
     @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-        Util.log("Is this visible that calling?");
+//        Util.log("Is this visible that calling?");
         Holder holder;
         View view;
 

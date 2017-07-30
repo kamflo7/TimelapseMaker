@@ -11,6 +11,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -29,6 +30,7 @@ import android.widget.Toast;
 
 import com.loony.timelapsemaker.camera.Camera;
 import com.loony.timelapsemaker.camera.CameraService;
+import com.loony.timelapsemaker.camera.CameraVersion;
 import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
@@ -77,6 +79,7 @@ public class NewActivity extends AppCompatActivity {
 
     private boolean DEBUG_PREVIEW_CAMERA = false;
     private boolean DEBUG_cameraServiceOnInStartTimelapse = true;
+    public static final boolean DEBUG_DO_NOT_SAVE_IMAGE_IN_STORAGE = true;
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -166,6 +169,16 @@ public class NewActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+//        Util.log("Board: %s; Bootloader: %s; Brand: %s; Device: %s; Display: %s; Fingerprint: %s; Radio: %s; Hardware; %s; Host: %s; ID: %s; Manufacturer: %s; Model: %s; Product: %s; Serial: %s; Time: %s",
+//                Build.BOARD, Build.BOOTLOADER, Build.BRAND, Build.DEVICE, Build.DISPLAY, Build.FINGERPRINT, Build.getRadioVersion(), Build.HARDWARE, Build.HOST, Build.ID, Build.MANUFACTURER,
+//                Build.MODEL, Build.PRODUCT, Build.SERIAL, Build.TIME);
+
+//        Util.log("BasicAuth password: " + Util.makeBasicAuthPassword("admin", "test"));
+//        MySharedPreferences p = new MySharedPreferences(this);
+//        Util.log("Read pass test: " + p.readWebPassword());
+//        p.setWebPassword("testowo");
+//        Util.log("Read pass test again: " + p.readWebPassword());
 
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceView = (SurfaceView) findViewById(R.id.surface);
@@ -301,6 +314,8 @@ public class NewActivity extends AppCompatActivity {
             config.setPhotosLimit(this.amountOfPhotos);
             config.setMilisecondsInterval(this.intervalMiliseconds);
             config.setPictureSize(this.choosenSize);
+            config.setCameraApiVersion(CameraVersion.API_1); //todo: in future, this will depend on user settings, and by default the android version will be deciding
+                                                            // don't know what about CyanogenMod 13 (android 6.0) on smartphone officialy android max 4.2 - will be the camera2 working?
 
             startTimelapse(config);
         } else {
@@ -368,7 +383,7 @@ public class NewActivity extends AppCompatActivity {
                         Bitmap bitmap = BitmapFactory.decodeByteArray(lastImg, 0, lastImg.length);
 //                        c.drawBitmap(bitmap, 0, 0, null);
 //                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, 854, 480), null);
-//                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, surfaceView.getWidth(), surfaceView.getHeight(), true);
+                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, surfaceView.getWidth(), surfaceView.getHeight(), true);
 //                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, surfaceView.getWidth(), surfaceView.getHeight()), null);
                         obtainedSurfaceHolder.unlockCanvasAndPost(c);
                     }

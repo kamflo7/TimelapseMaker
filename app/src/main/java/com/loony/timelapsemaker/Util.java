@@ -8,6 +8,7 @@ import android.content.IntentFilter;
 import android.os.BatteryManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
+import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -37,6 +38,19 @@ public class Util {
     public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO = "capturedPhoto";
     public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
 
+
+    /*
+    The username and password are combined with a single colon. (:)
+    The resulting string is encoded into an octet sequence.[7]
+    The resulting string is encoded using a variant of Base64.[8]
+    The authorization method and a space is then prepended to the encoded string, separated with a space (e.g. "Basic ").
+    */
+
+    public static String makeBasicAuthPassword(String username, String password) {
+        String s = username + ":" + password;
+        String result = "Basic " + Base64.encodeToString(s.getBytes(), Base64.NO_WRAP);
+        return result;
+    }
 
     public static Camera getAppropriateCamera() {
         //Random r = new Random();

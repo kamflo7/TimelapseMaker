@@ -14,5 +14,6 @@
 
 
     <string name="test_multiscreen">Not specified</string>
+    <string name="text_dialog_change_password_success">You have successfully changed the web password</string>
 
 </resources>

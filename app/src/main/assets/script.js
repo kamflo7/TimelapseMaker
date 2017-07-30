@@ -1,5 +1,6 @@
 var setTimelapseID, setResolution, setInterval, setCaptured,
-	setNextPhotoTime, setBattery, setWatchers, setProgress;
+	setNextPhotoTime, setBattery, setWatchers, setProgress,
+	setDeviceName, setAPIVersion;
 var clearUIData;
 var requestData;
 
@@ -25,6 +26,8 @@ $(document).ready(function() {
 		$("#timelapseProgress").text(progress+"%");
 		$("#timelapseProgress").attr('aria-valuenow', progress);
 	}
+	setDeviceName 	= 	function(name="-") 			{	$("#deviceName").text(name);}
+	setAPIVersion 	= 	function(api="-") 			{	$("#cameraApi").text(api);}
 
 	clearUIData = function() {
 		setTimelapseID();
@@ -36,7 +39,7 @@ $(document).ready(function() {
 		setWatchers();
 		setProgress(0);
 	}
-	
+
 	getBaseHref = function() {
 		return "http://" + window.location.hostname + ":"+port+"/";
 	}
@@ -52,11 +55,13 @@ $(document).ready(function() {
 				var json = JSON.parse(r);
 				
 				setResolution(json.resolution);
-				setInterval(json.intervalMiliseconds / 1000);
+				setInterval((json.intervalMiliseconds / 1000) + "s");
 				setCaptured(json.capturedPhotos, json.maxPhotos);
 				setProgress((json.capturedPhotos / json.maxPhotos) * 100);
 				setBattery(parseFloat(json.battery_level) + "%");
 				setTimelapseID(json.timelapseID);
+				setDeviceName(json.device_name + " (" + json.android_version + ")");
+				setAPIVersion("v"+json.camera_api);
 				port = json.app_port;
 				
 				$("#outputImage").attr("src", "data:image/png;base64,"
@@ -91,7 +96,7 @@ $(document).ready(function() {
 		
 	var refreshTimeToNextPhoto = function() {
 		var diff = lastTimeToNextCaptureMs - (new Date().getTime() - unixTimeWhenGotPhoto);
-		console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
+		//console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
 		if(diff < 0) diff = 0;
 		
 		setNextPhotoTime(parseInt(diff/1000) + "s");

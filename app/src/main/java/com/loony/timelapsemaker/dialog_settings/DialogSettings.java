@@ -11,14 +11,18 @@ import android.os.Build;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v7.app.AlertDialog;
+import android.text.InputType;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.Window;
 import android.widget.AdapterView;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.NumberPicker;
+import android.widget.Toast;
 
+import com.loony.timelapsemaker.MySharedPreferences;
 import com.loony.timelapsemaker.R;
 import com.loony.timelapsemaker.Util;
 import com.loony.timelapsemaker.camera.Resolution;
@@ -114,6 +118,7 @@ public class DialogSettings {
     }
 
     private void setListViewClickListenerForBasicCategory(ListView listView) {
+
         final ArrayList<DialogOption> options = new ArrayList<>();
         options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()));
         options.add(new DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()));
@@ -152,6 +157,7 @@ public class DialogSettings {
                         final NumberPicker numberPicker = new NumberPicker(context);
                         numberPicker.setMinValue(3);
                         numberPicker.setMaxValue(60 * 5);
+                        numberPicker.setValue(intervalMiliseconds / 1000);
 
                         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
                         builder.setTitle(R.string.dialog_choose_interval)
@@ -181,6 +187,7 @@ public class DialogSettings {
                         final NumberPicker numberPicker = new NumberPicker(context);
                         numberPicker.setMinValue(3);
                         numberPicker.setMaxValue(1000);
+                        numberPicker.setValue(photosLimit);
 
                         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
                         builder.setTitle(R.string.dialog_choose_amount_photos)
@@ -204,6 +211,41 @@ public class DialogSettings {
                                 });
                         AlertDialog dialog = builder.create();
                         dialog.show();
+                        break;
+                    }
+                    case 3: { // storage
+                        break;
+                    }
+                    case 4: { // web access
+                        final MySharedPreferences p = new MySharedPreferences(context);
+                        final String webPassword = p.readWebPassword();
+
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle("Set web password");
+                        final EditText input = new EditText(context);
+                        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                        input.setText(webPassword);
+                        builder.setView(input);
+                        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                String newPassword = input.getText().toString();
+                                String finalPass = Util.makeBasicAuthPassword("admin", newPassword);
+                                p.setWebPassword(finalPass);
+
+//                                Util.log("[Changing pass] Pass source: '%s'; finalPass: '%s'", newPassword, finalPass);
+                                Toast.makeText(context, R.string.text_dialog_change_password_success, Toast.LENGTH_LONG).show();
+                                dialog.dismiss();
+                            }
+                        });
+                        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.cancel();
+                            }
+                        });
+
+                        builder.show();
                         break;
                     }
                 }
