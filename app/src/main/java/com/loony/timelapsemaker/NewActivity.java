@@ -10,8 +10,6 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Rect;
-import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -35,6 +33,7 @@ import com.loony.timelapsemaker.camera.Resolution;
 import com.loony.timelapsemaker.camera.TimelapseConfig;
 import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 import com.loony.timelapsemaker.dialog_settings.DialogSettings;
+import com.loony.timelapsemaker.http_server.HttpServer;
 import com.loony.timelapsemaker.http_server.HttpService;
 
 public class NewActivity extends AppCompatActivity {
@@ -52,6 +51,7 @@ public class NewActivity extends AppCompatActivity {
 
     private TimelapseConfig timelapseConfig;
     private boolean isDoingTimelapse;
+    private boolean isPreviewing;
 
     // camera service
     private boolean cameraServiceBound;
@@ -77,9 +77,9 @@ public class NewActivity extends AppCompatActivity {
     private int amountOfPhotos = 20;
     private boolean webEnabled = true;
 
-    private boolean DEBUG_PREVIEW_CAMERA = false;
-    private boolean DEBUG_cameraServiceOnInStartTimelapse = true;
-    public static final boolean DEBUG_DO_NOT_SAVE_IMAGE_IN_STORAGE = true;
+    private boolean DEBUG_doNotPreview = false;  // normally: FALSE
+    private boolean DEBUG_doNotStartCameraService_in_startTimelapse = false; // normally: FALSE
+    public static final boolean DEBUG_doNotSaveImageInStorageWhenCaptured = true; // normally: FALSE
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -149,8 +149,11 @@ public class NewActivity extends AppCompatActivity {
 
     private void updateUIWebAccess() {
         if(isDoingTimelapse) {
-            // todo: show IP if active
-            statsWebAccess.setText(webEnabled ? R.string.text_enabled : R.string.text_disabled);
+            String ip = Util.getLocalIpAddress(true);
+
+            if(webEnabled)  statsWebAccess.setText(ip+":"+HttpServer.PORT);
+            else            statsWebAccess.setText(R.string.text_disabled);
+
             statsWebAccess.setTextColor(this.getResources().getColor(webEnabled ? R.color.statsPanel_enabled : R.color.statsPanel_disabled));
         } else {
             statsWebAccess.setText(webEnabled ? R.string.text_enabled : R.string.text_disabled);
@@ -170,16 +173,6 @@ public class NewActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-//        Util.log("Board: %s; Bootloader: %s; Brand: %s; Device: %s; Display: %s; Fingerprint: %s; Radio: %s; Hardware; %s; Host: %s; ID: %s; Manufacturer: %s; Model: %s; Product: %s; Serial: %s; Time: %s",
-//                Build.BOARD, Build.BOOTLOADER, Build.BRAND, Build.DEVICE, Build.DISPLAY, Build.FINGERPRINT, Build.getRadioVersion(), Build.HARDWARE, Build.HOST, Build.ID, Build.MANUFACTURER,
-//                Build.MODEL, Build.PRODUCT, Build.SERIAL, Build.TIME);
-
-//        Util.log("BasicAuth password: " + Util.makeBasicAuthPassword("admin", "test"));
-//        MySharedPreferences p = new MySharedPreferences(this);
-//        Util.log("Read pass test: " + p.readWebPassword());
-//        p.setWebPassword("testowo");
-//        Util.log("Read pass test again: " + p.readWebPassword());
-
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceView = (SurfaceView) findViewById(R.id.surface);
         btnStartTimelapse = (ImageButton) findViewById(R.id.btnStartTimelapse);
@@ -191,6 +184,9 @@ public class NewActivity extends AppCompatActivity {
         statsPhotosCaptured = (TextView) findViewById(R.id.photosCapturedTxtContent);
         statsNextCapture = (TextView) findViewById(R.id.nextCaptureTxtContent);
         statsResolution = (TextView) findViewById(R.id.resolutionTxtContent);
+
+        MySharedPreferences p = new MySharedPreferences(this);
+        webEnabled = p.getWebEnabled();
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
 
@@ -353,6 +349,12 @@ public class NewActivity extends AppCompatActivity {
                 startPreview(obtainedSurfaceHolder);
                 updateUIentire();
             }
+
+            @Override
+            public void onToggleWebServer(boolean toggle) {
+                NewActivity.this.webEnabled = toggle;
+                updateUIWebAccess();
+            }
         });
         dialogSettings.show();
     }
@@ -364,12 +366,14 @@ public class NewActivity extends AppCompatActivity {
             if(msg != null) {
                 if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED)) {
                     Toast.makeText(NewActivity.this, "Timelapse has been done", Toast.LENGTH_LONG).show();
-                    Util.log("Timelapse work is done");
+                    Util.log("-----> NewActivity:Broadcast FINISHED");
                     stopTimelapse();
                     startPreview(surfaceView.getHolder());
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
-                    Util.log("Timelapse work is done (but with fail)");
-                    stopTimelapse();
+                    Util.log("-----> NewActivity:Broadcast FINISHED FAILED");
+                    if(isDoingTimelapse)
+                        stopTimelapse();
+
                     startPreview(surfaceView.getHolder());
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
                     lastPhotoTakenAtMilisTime = System.currentTimeMillis();
@@ -379,12 +383,9 @@ public class NewActivity extends AppCompatActivity {
 
                     Canvas c = obtainedSurfaceHolder.lockCanvas();
                     if(c != null) {
-//                        Util.log("It should render bitmap");
                         Bitmap bitmap = BitmapFactory.decodeByteArray(lastImg, 0, lastImg.length);
-//                        c.drawBitmap(bitmap, 0, 0, null);
-//                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, 854, 480), null);
-                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, surfaceView.getWidth(), surfaceView.getHeight(), true);
-//                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, surfaceView.getWidth(), surfaceView.getHeight()), null);
+                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, c.getWidth(), c.getHeight(), true);
+                        c.drawBitmap(scaled, 0, 0, null);
                         obtainedSurfaceHolder.unlockCanvasAndPost(c);
                     }
                 }
@@ -397,7 +398,7 @@ public class NewActivity extends AppCompatActivity {
         this.timelapseConfig = timelapseConfig;
         stopPreviewIfDoes();
 
-        if(DEBUG_cameraServiceOnInStartTimelapse) {
+        if(!DEBUG_doNotStartCameraService_in_startTimelapse) {
             startCameraService(timelapseConfig);
             bindToCameraService();
         }
@@ -443,12 +444,20 @@ public class NewActivity extends AppCompatActivity {
 
         isDoingTimelapse = false;
         updateUIentire();
-        Util.log("Trying to stop timelapse session");
+
+//        Intent i = getIntent();
+//        finish();
+//        startActivity(i);
+
     }
 
     private void startPreview(SurfaceHolder surfaceHolder) {
-        if(!DEBUG_PREVIEW_CAMERA)
+        if(DEBUG_doNotPreview)
             return;
+
+        if(isPreviewing)
+            return;
+
 
         camera = Util.getAppropriateCamera();
         try {
@@ -457,6 +466,7 @@ public class NewActivity extends AppCompatActivity {
             camera.setOutputSize(choosenSize);
             surfaceHolder.setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
             camera.openForPreview(surfaceHolder);
+            isPreviewing = true;
         } catch (CameraNotAvailableException e) {
             e.printStackTrace();
         }
@@ -469,6 +479,7 @@ public class NewActivity extends AppCompatActivity {
         try {
             camera.close();
             camera = null;
+            isPreviewing = false;
         } catch(NullPointerException e) {}
     }
 

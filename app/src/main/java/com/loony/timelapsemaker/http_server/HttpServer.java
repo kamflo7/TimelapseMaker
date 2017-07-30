@@ -38,13 +38,11 @@ import fi.iki.elonen.NanoHTTPD;
  */
 
 public class HttpServer extends NanoHTTPD {
-//    private static String BROADCAST_FILTER
+    public static final int PORT = 9090;
     private static String HTTP_AUTHORIZATION = "authorization";
-//    private static final String PASSWORD = "Basic YWRtaW46YmFyeWxvaw==";
     private String password;
 
     private Context context;
-    private final int port;
 
     // dispatch values
     private String base64image = null;
@@ -65,13 +63,12 @@ public class HttpServer extends NanoHTTPD {
 
     private Map<String, Long> clientsIp;
 
-    public HttpServer(Context context, int port, TimelapseConfig timelapseConfig) {
-        super(port);
+    public HttpServer(Context context, TimelapseConfig timelapseConfig) {
+        super(PORT);
         this.context = context;
-        this.port = port;
-//        makeBase64image(testLoadImageFromDisk());
-        //Util.log("TestBufferSize: " + (testImgBuffer != null ? testImgBuffer.length : "null"));
-        Util.log("HttpServer::__construct IP: " + Util.getLocalIpAddress(true) + ":"+port);
+
+
+        Util.log("HttpServer::__construct IP: " + Util.getLocalIpAddress(true) + ":"+PORT);
         LocalBroadcastManager.getInstance(context).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
         resolution = timelapseConfig.getPictureSize();
         intervalMilisecond = (int) timelapseConfig.getMilisecondsInterval();
@@ -163,7 +160,7 @@ public class HttpServer extends NanoHTTPD {
 
         try {
             dataJson.put("success", "true")
-                    .put("app_port", port)
+                    .put("app_port", PORT)
                     .put("timelapseID", timelapseID)
                     .put("battery_level", Util.getBatteryLevel(context))
                     .put("device_name", Build.MANUFACTURER + " " + Build.MODEL)

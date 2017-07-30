@@ -3,7 +3,6 @@ package com.loony.timelapsemaker;
 import android.os.Environment;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -55,7 +54,7 @@ public class StorageManager {
      * @return true if successfully saved, false if was any problem
      */
     public boolean saveImage(String directory, String imageName, byte[] imageBytes) {
-        if(NewActivity.DEBUG_DO_NOT_SAVE_IMAGE_IN_STORAGE)
+        if(NewActivity.DEBUG_doNotSaveImageInStorageWhenCaptured)
             return true;
 
         File photo = new File(String.format("%s/%s.jpg", getPath(directory), imageName));

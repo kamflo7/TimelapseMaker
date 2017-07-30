@@ -10,6 +10,7 @@ import android.content.SharedPreferences;
 public class MySharedPreferences {
     private static String FILE_KEY = "com.loony.timelapsemaker.settingsFile";
     private static String KEY_WEB_PASSWORD = "com.loony.timelapsemaker.settingsFile.webpassword";
+    private static String KEY_WEB_ENABLED = "com.loony.timelapsemaker.settingsFile.webenabled";
 
     SharedPreferences sharedPref;
 
@@ -25,5 +26,15 @@ public class MySharedPreferences {
         SharedPreferences.Editor editor = sharedPref.edit();
         editor.putString(KEY_WEB_PASSWORD, password);
         editor.commit();
+    }
+
+    public void setWebEnabled(boolean enabled) {
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putBoolean(KEY_WEB_ENABLED, enabled);
+        editor.commit();
+    }
+
+    public boolean getWebEnabled() {
+        return sharedPref.getBoolean(KEY_WEB_ENABLED, true);
     }
 }

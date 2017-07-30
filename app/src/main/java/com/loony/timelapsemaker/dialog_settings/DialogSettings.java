@@ -17,6 +17,7 @@ import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.Window;
 import android.widget.AdapterView;
+import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.NumberPicker;
@@ -124,7 +125,18 @@ public class DialogSettings {
         options.add(new DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()));
         options.add(new DialogOption(R.drawable.ic_amount, "Limit", getPhotosLimitDescription()));
         options.add(new DialogOption(R.drawable.ic_sd_storage, "Storage", "Storage location for your timalapses"));
-        options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website", DialogOption.Switch.DISABLED));
+        options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website",
+                webEnabled ? DialogOption.Switch.ENABLED : DialogOption.Switch.DISABLED, new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                Toast.makeText(DialogSettings.this.context, b ? R.string.text_dialog_webserver_toggleOn : R.string.text_dialog_webserver_toggleOff, Toast.LENGTH_LONG).show();
+                MySharedPreferences p = new MySharedPreferences(DialogSettings.this.context);
+                p.setWebEnabled(b);
+                onDialogSettingChangeListener.onToggleWebServer(b);
+            }
+        }));
+
+
         final DialogSettingsAdapter adapter = new DialogSettingsAdapter(context, options);
         listView.setAdapter(adapter);
 
@@ -299,6 +311,7 @@ public class DialogSettings {
         void onChangePhotoResolution(Resolution resolution);
         void onChangeInterval(int intervalMiliseconds);
         void onChangePhotosLimit(int amount);
+        void onToggleWebServer(boolean toggle);
 
         void onDialogExit();
     }

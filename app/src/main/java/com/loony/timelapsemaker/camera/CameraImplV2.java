@@ -227,30 +227,14 @@ public class CameraImplV2 implements Camera {
         }
     }
 
-    /*private void saveImageToDisk(Image image) { //
-        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-
-        File photo = new File(Environment.getExternalStorageDirectory(), "myPhoto"+(photoNumberTest++)+".jpg");
-
-        if(photo.exists())
-            photo.delete();
-
-        try {
-            FileOutputStream fos = new FileOutputStream(photo.getPath());
-
-            fos.write(bytes);
-            fos.close();
-
-            Util.log("Saved image to %s", photo.getPath());
-        } catch(IOException e) {
-            Util.log("Problem with saving image " + e.getMessage());
-        }
-    }*/
-
     @Override
     public void capturePhoto() {
+        if(cameraDevice == null || captureSession == null) {
+            if(onCameraStateChangeListener != null)
+                onCameraStateChangeListener.onCameraDisconnectOrError();
+            return;
+        }
+
         try {
             previewRequestBuilder.set(CaptureRequest.CONTROL_AF_TRIGGER, CameraMetadata.CONTROL_AF_TRIGGER_START);
             captureState = STATE_WAITING_LOCK;
@@ -294,7 +278,8 @@ public class CameraImplV2 implements Camera {
             @Override
             public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
                 close();
-                onCameraStateChangeListener.onCameraDisconnectOrError();
+                if(onCameraStateChangeListener != null)
+                    onCameraStateChangeListener.onCameraDisconnectOrError();
             }
         }, backgroundHandler);
     }

@@ -37,7 +37,7 @@ public class HttpService extends Service {
 
         TimelapseConfig timelapseConfig = intent.getExtras().getParcelable(NewActivity.PARCEL_TIMELAPSE_CONFIG);
 
-        server = new HttpServer(getApplicationContext(), 9090, timelapseConfig);
+        server = new HttpServer(getApplicationContext(), timelapseConfig);
         try {
             server.start();
         } catch (IOException e) {

@@ -61,6 +61,7 @@ public class DialogSettingsAdapter extends ArrayAdapter<DialogOption> {
         if(item.switchState != DialogOption.Switch.NOT_EXIST) {
             holder.switchCompat.setVisibility(View.VISIBLE);
             holder.switchCompat.setChecked(item.switchState == DialogOption.Switch.ENABLED);
+            holder.switchCompat.setOnCheckedChangeListener(item.onSwitchCheckedChange);
         } else {
             holder.switchCompat.setVisibility(View.GONE);
         }

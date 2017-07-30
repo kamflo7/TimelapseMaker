@@ -15,5 +15,8 @@
 
     <string name="test_multiscreen">Not specified</string>
     <string name="text_dialog_change_password_success">You have successfully changed the web password</string>
+    <string name="text_dialog_webserver_toggleOn">You have turned on the web server</string>
+    <string name="text_dialog_webserver_toggleOff">You have turned off the web server</string>
+
 
 </resources>

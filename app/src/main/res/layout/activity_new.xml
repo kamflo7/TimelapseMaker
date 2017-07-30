@@ -6,22 +6,13 @@
     android:layout_height="match_parent"
     tools:context="com.loony.timelapsemaker.NewActivity"
     android:id="@+id/frame">
-    <!--<RelativeLayout
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/container"
-        >
-        <SurfaceView
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:id="@+id/surface"
-            />
-        <Button
-            android:visibility="gone"
-            android:text="Test"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </RelativeLayout>-->
+    <!--<RelativeLayout-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:id="@+id/surfaceContainer"-->
+        <!--&gt;-->
+        <!---->
+    <!--</RelativeLayout>-->
     <SurfaceView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -44,21 +35,6 @@
             android:layout_marginEnd="15dp"
             android:layout_marginRight="15dp"
             android:id="@+id/btnStartTimelapse"/>
-        <!--<ImageButton
-            android:layout_width="30dp"
-            android:layout_height="wrap_content"
-            android:scaleType="fitCenter"
-            android:adjustViewBounds="true"
-            android:src="@drawable/settings"
-            android:id="@+id/btnSettings"
-            android:onClick="btnSettingsClick"
-            android:background="@null"
-            android:layout_centerVertical="true"
-            android:layout_alignParentTop="true"
-            android:layout_marginStart="15dp"
-            android:layout_marginLeft="15dp"
-            android:layout_marginTop="15dp"
-            />-->
         <android.support.design.widget.FloatingActionButton
             android:id="@+id/fab"
             android:layout_width="50dp"
@@ -70,7 +46,6 @@
             android:layout_alignParentTop="true"
             android:layout_marginLeft="15dp"
             android:layout_marginTop="15dp"
-
             android:onClick="btnSettingActionClick"
             />
 
