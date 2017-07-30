@@ -6,18 +6,18 @@
     android:layout_height="match_parent"
     tools:context="com.loony.timelapsemaker.NewActivity"
     android:id="@+id/frame">
-    <!--<RelativeLayout-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent"-->
-        <!--android:id="@+id/surfaceContainer"-->
-        <!--&gt;-->
-        <!---->
-    <!--</RelativeLayout>-->
-    <SurfaceView
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:id="@+id/surface"
-        />
+        android:id="@+id/surfaceContainer"
+        >
+
+    </RelativeLayout>
+    <!--<SurfaceView-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent"-->
+        <!--android:id="@+id/surface"-->
+        <!--/>-->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent">

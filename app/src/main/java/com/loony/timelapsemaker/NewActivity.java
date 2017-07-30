@@ -23,6 +23,7 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -42,7 +43,9 @@ public class NewActivity extends AppCompatActivity {
 
     private Camera camera;
 
-    private SurfaceView surfaceView;
+    private RelativeLayout surfaceContainer;
+    private SurfaceView surfaceViewProgrammatically;
+//    private SurfaceView surfaceView;
     private SurfaceHolder.Callback surfaceHolderCallback;
     private ImageButton btnStartTimelapse;
     private FloatingActionButton fab;
@@ -174,7 +177,8 @@ public class NewActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
-        surfaceView = (SurfaceView) findViewById(R.id.surface);
+        surfaceContainer = (RelativeLayout) findViewById(R.id.surfaceContainer);
+//        surfaceView = (SurfaceView) findViewById(R.id.surface);
         btnStartTimelapse = (ImageButton) findViewById(R.id.btnStartTimelapse);
         //btnSettings = (ImageButton) findViewById(R.id.btnSettings);
         fab = (FloatingActionButton) findViewById(R.id.fab);
@@ -252,27 +256,29 @@ public class NewActivity extends AppCompatActivity {
 //            return;
 
         if(!isDoingTimelapse) {
-            if (surfaceHolderCallback != null) {
-                surfaceView.getHolder().removeCallback(surfaceHolderCallback);
-            }
+            startPreview();
 
-            surfaceHolderCallback = new SurfaceHolder.Callback() {
-                @Override
-                public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                    obtainedSurfaceHolder = surfaceHolder;
-                    startPreview(surfaceHolder);
-                }
-
-                @Override
-                public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-                }
-
-                @Override
-                public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-                }
-            };
-
-            surfaceView.getHolder().addCallback(surfaceHolderCallback);
+//            if (surfaceHolderCallback != null) {
+//                surfaceView.getHolder().removeCallback(surfaceHolderCallback);
+//            }
+//
+//            surfaceHolderCallback = new SurfaceHolder.Callback() {
+//                @Override
+//                public void surfaceCreated(SurfaceHolder surfaceHolder) {
+//                    obtainedSurfaceHolder = surfaceHolder;
+//                    startPreview(surfaceHolder);
+//                }
+//
+//                @Override
+//                public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+//                }
+//
+//                @Override
+//                public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+//                }
+//            };
+//
+//            surfaceView.getHolder().addCallback(surfaceHolderCallback);
         } else {
             // todo #1: force retrieve information about current timelapse session statistics? [interval, capturedPhotos, etc]
         }
@@ -346,7 +352,7 @@ public class NewActivity extends AppCompatActivity {
 
             @Override
             public void onDialogExit() {
-                startPreview(obtainedSurfaceHolder);
+                startPreview();
                 updateUIentire();
             }
 
@@ -368,13 +374,13 @@ public class NewActivity extends AppCompatActivity {
                     Toast.makeText(NewActivity.this, "Timelapse has been done", Toast.LENGTH_LONG).show();
                     Util.log("-----> NewActivity:Broadcast FINISHED");
                     stopTimelapse();
-                    startPreview(surfaceView.getHolder());
+                    startPreview();
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
                     Util.log("-----> NewActivity:Broadcast FINISHED FAILED");
                     if(isDoingTimelapse)
                         stopTimelapse();
 
-                    startPreview(surfaceView.getHolder());
+                    startPreview();
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
                     lastPhotoTakenAtMilisTime = System.currentTimeMillis();
                     currentTakenPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
@@ -451,30 +457,53 @@ public class NewActivity extends AppCompatActivity {
 
     }
 
-    private void startPreview(SurfaceHolder surfaceHolder) {
+    private void startPreview() {
         if(DEBUG_doNotPreview)
             return;
 
         if(isPreviewing)
             return;
 
-
-        camera = Util.getAppropriateCamera();
-        try {
-            camera.prepare(NewActivity.this);
-            Util.log("startPreview with resolution " + choosenSize.getWidth() + "x" + choosenSize.getHeight());
-            camera.setOutputSize(choosenSize);
-            surfaceHolder.setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
-            camera.openForPreview(surfaceHolder);
-            isPreviewing = true;
-        } catch (CameraNotAvailableException e) {
-            e.printStackTrace();
+        if(surfaceContainer.getChildCount() > 0) {
+            surfaceContainer.removeView(surfaceViewProgrammatically);
         }
+
+        surfaceViewProgrammatically = new SurfaceView(this);
+        surfaceViewProgrammatically.setLayoutParams(new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT));
+        surfaceContainer.addView(surfaceViewProgrammatically);
+
+        surfaceViewProgrammatically.getHolder().addCallback(new SurfaceHolder.Callback() {
+            @Override
+            public void surfaceCreated(SurfaceHolder surfaceHolder) {
+                camera = Util.getAppropriateCamera();
+                try {
+                    obtainedSurfaceHolder = surfaceHolder;
+                    camera.prepare(NewActivity.this);
+                    Util.log("startPreview with resolution " + choosenSize.getWidth() + "x" + choosenSize.getHeight());
+                    camera.setOutputSize(choosenSize);
+                    surfaceHolder.setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
+                    camera.openForPreview(surfaceHolder);
+                    isPreviewing = true;
+                } catch (CameraNotAvailableException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
+
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+
+            }
+        });
     }
 
     private void stopPreviewIfDoes() {
-        if(surfaceHolderCallback != null)
-            surfaceView.getHolder().removeCallback(surfaceHolderCallback);
+//        if(surfaceHolderCallback != null)
+//            surfaceView.getHolder().removeCallback(surfaceHolderCallback);
 
         try {
             camera.close();
