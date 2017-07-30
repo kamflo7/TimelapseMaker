@@ -28,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.HashMap;
 import java.util.Map;
 
 import fi.iki.elonen.NanoHTTPD;
@@ -62,6 +63,8 @@ public class HttpServer extends NanoHTTPD {
     };
     private Status status = Status.DOING;
 
+    private Map<String, Long> clientsIp;
+
     public HttpServer(Context context, int port, TimelapseConfig timelapseConfig) {
         super(port);
         this.context = context;
@@ -77,7 +80,8 @@ public class HttpServer extends NanoHTTPD {
 
         MySharedPreferences p = new MySharedPreferences(context);
         password = p.readWebPassword();
-        Util.log("[HttpServer] read password '%s'", password);
+//        Util.log("[HttpServer] read password '%s'", password);
+        clientsIp = new HashMap<>();
     }
 
     private void makeBase64image(byte[] sourceBytes) {
@@ -96,7 +100,7 @@ public class HttpServer extends NanoHTTPD {
             String msg = intent.getStringExtra(Util.BROADCAST_MESSAGE);
             if(msg != null) {
                 if(msg.equals(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO)) {
-                    Util.log("HttpServer::Broadcast received a message");
+//                    Util.log("HttpServer::Broadcast received a message");
 //                    lastPhotoTakenAtMilisTime = System.currentTimeMillis();
                     capturedPhotos = intent.getIntExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, -1);
                     timeOfLastPhotoCapture = System.currentTimeMillis();
@@ -116,7 +120,7 @@ public class HttpServer extends NanoHTTPD {
 
     @Override
     public Response serve(IHTTPSession session) {
-        //printSession(session);
+        printSession(session);
 
         if(!isAuthorized(session)) {
             Response response = newFixedLengthResponse(Response.Status.UNAUTHORIZED, MIME_PLAINTEXT, "Needs authentication");
@@ -140,6 +144,8 @@ public class HttpServer extends NanoHTTPD {
         } else if(uri.equals("/getImage")) {
             return serveCapturedImage();
         } else if(uri.equals("/getData")) {
+            String clientIP = session.getRemoteIpAddress();
+            clientsIp.put(clientIP, System.currentTimeMillis());
             return serveData();
         }
 
@@ -150,8 +156,11 @@ public class HttpServer extends NanoHTTPD {
     private Response serveData() {
         JSONObject dataJson = new JSONObject();
 
+        int countWatchers = 0;
+        for(Map.Entry<String, Long> entry : clientsIp.entrySet())
+            if(System.currentTimeMillis() - entry.getValue() < (intervalMilisecond + 5000))
+                countWatchers++;
 
-        // android.os.Build.MODEL;  android.os.Build.MANUFACTURER   android.os.Build.PRODUCT
         try {
             dataJson.put("success", "true")
                     .put("app_port", port)
@@ -166,7 +175,8 @@ public class HttpServer extends NanoHTTPD {
                     .put("maxPhotos", maxPhotos)
                     .put("timeMsToNextCapture", intervalMilisecond - (System.currentTimeMillis() - timeOfLastPhotoCapture))
                     .put("image", base64image)
-                    .put("timelapseStatus", status == Status.DOING ? "doing" : (status == Status.FINISHED ? "finished" : "failed"));
+                    .put("timelapseStatus", status == Status.DOING ? "doing" : (status == Status.FINISHED ? "finished" : "failed"))
+                    .put("watchers", countWatchers);
         } catch (JSONException e) {
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
         }
@@ -174,7 +184,7 @@ public class HttpServer extends NanoHTTPD {
 
         String response = dataJson.toString();
 
-        Util.log("Someone is requesting data, data: " + response);
+//        Util.log("Someone is requesting data, data: " + response);
         return newFixedLengthResponse(response);
     }
 

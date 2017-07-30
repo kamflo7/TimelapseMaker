@@ -62,6 +62,7 @@ $(document).ready(function() {
 				setTimelapseID(json.timelapseID);
 				setDeviceName(json.device_name + " (" + json.android_version + ")");
 				setAPIVersion("v"+json.camera_api);
+				setWatchers(json.watchers);
 				port = json.app_port;
 				
 				$("#outputImage").attr("src", "data:image/png;base64,"

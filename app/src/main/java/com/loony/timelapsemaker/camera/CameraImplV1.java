@@ -74,7 +74,7 @@ public class CameraImplV1 implements com.loony.timelapsemaker.camera.Camera {
             @Override
             public void onPictureTaken(byte[] bytes, Camera camera) {
                 camera.stopPreview();
-                Util.log("CameraImplV1::capturePhoto() -> onPictureTaken");
+//                Util.log("CameraImplV1::capturePhoto() -> onPictureTaken");
                 CameraImplV1.this.onPhotoCaptureListener.onCreate(bytes);
             }
         });

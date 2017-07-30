@@ -379,7 +379,7 @@ public class NewActivity extends AppCompatActivity {
 
                     Canvas c = obtainedSurfaceHolder.lockCanvas();
                     if(c != null) {
-                        Util.log("It should render bitmap");
+//                        Util.log("It should render bitmap");
                         Bitmap bitmap = BitmapFactory.decodeByteArray(lastImg, 0, lastImg.length);
 //                        c.drawBitmap(bitmap, 0, 0, null);
 //                        c.drawBitmap(bitmap, new Rect(0, 0, 3264, 1836), new Rect(0, 0, 854, 480), null);
