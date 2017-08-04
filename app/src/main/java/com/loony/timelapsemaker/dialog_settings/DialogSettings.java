@@ -149,6 +149,7 @@ public class DialogSettings {
                 onDialogSettingChangeListener.onToggleWebServer(b);
             }
         }));
+        options.add(new DialogOption(R.drawable.ic_help, "Info", "Informations about application"));
 
 
         final DialogSettingsAdapter adapter = new DialogSettingsAdapter(context, options);
@@ -300,6 +301,26 @@ public class DialogSettings {
                         });
 
                         builder.show();
+                        break;
+                    }
+                    case 5: { // help
+                        StringBuilder msg = new StringBuilder();
+                        msg.append("Simple app to shoot timelapses");
+                        msg.append("\n\nVersion: " + Util.getApplicationVersion(DialogSettings.this.context));
+                        msg.append("\nAuthor: florczykkamil@gmail.com");
+                        msg.append("\nBitbucket: https://bitbucket.org/Loony04/timelapsemaker");
+
+
+                        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle("Info")
+                                .setMessage(msg.toString())
+                                .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        dialogInterface.dismiss();
+                                    }
+                                })
+                                .show();
                         break;
                     }
                 }

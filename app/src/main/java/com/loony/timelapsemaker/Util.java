@@ -5,6 +5,8 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.os.BatteryManager;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.content.PermissionChecker;
@@ -38,6 +40,21 @@ public class Util {
 
     public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO = "capturedPhoto";
     public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
+
+
+    public static String getApplicationVersion(Context context) {
+        String version = "";
+
+        PackageInfo pInfo = null;
+        try {
+            pInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), 0);
+            version = pInfo.versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        return version;
+    }
 
     public static String makeBasicAuthPassword(String username, String password) {
         String s = username + ":" + password;

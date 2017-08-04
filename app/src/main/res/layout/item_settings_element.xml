@@ -11,7 +11,7 @@
         android:adjustViewBounds="true"
         android:src="@drawable/ic_photo_size_select"
         android:id="@+id/icon"
-        android:paddingRight="5dp"
+        android:padding="5dp"
         />
     <TextView
         android:layout_width="match_parent"

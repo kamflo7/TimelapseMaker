@@ -10,6 +10,8 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
@@ -132,7 +134,6 @@ public class NewActivity extends AppCompatActivity {
         Util.log("stopCountDownToNextPhoto() called 2/2");
     }
 
-
     private void updateUIResolution() {
         if(choosenSize == null)
             statsResolution.setText("not received");
@@ -154,12 +155,22 @@ public class NewActivity extends AppCompatActivity {
 
     private void updateUIWebAccess() {
         if(isDoingTimelapse) {
-            String ip = Util.getLocalIpAddress(true);
+            if(webEnabled) {
+                ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
 
-            if(webEnabled)  statsWebAccess.setText(ip+":"+HttpServer.PORT);
-            else            statsWebAccess.setText(R.string.text_disabled);
-
-            statsWebAccess.setTextColor(this.getResources().getColor(webEnabled ? R.color.statsPanel_enabled : R.color.statsPanel_disabled));
+                if (mWifi.isConnected()) {
+                    String ip = Util.getLocalIpAddress(true);
+                    statsWebAccess.setText(ip+":"+HttpServer.PORT);
+                    statsWebAccess.setTextColor(this.getResources().getColor(R.color.statsPanel_enabled));
+                } else {
+                    statsWebAccess.setText("Wifi off");
+                    statsWebAccess.setTextColor(this.getResources().getColor(R.color.statsPanel_disabled));
+                }
+            } else {
+                statsWebAccess.setText(R.string.text_disabled);
+                statsWebAccess.setTextColor(this.getResources().getColor(R.color.statsPanel_disabled));
+            }
         } else {
             statsWebAccess.setText(webEnabled ? R.string.text_enabled : R.string.text_disabled);
             statsWebAccess.setTextColor(this.getResources().getColor(webEnabled ? R.color.statsPanel_enabled : R.color.statsPanel_disabled));

@@ -49,6 +49,10 @@ public class MySharedPreferences {
     }
 
     public CameraVersion getCameraApi() {
-        return sharedPref.getInt(KEY_CAMERA_API, Build.VERSION.SDK_INT >= 21 ? 2 : 1) == 1 ? CameraVersion.API_1 : CameraVersion.API_2;
+//        return sharedPref.getInt(KEY_CAMERA_API, Build.VERSION.SDK_INT >= 21 ? 2 : 1) == 2 ? CameraVersion.API_2 : CameraVersion.API_1;
+        return sharedPref.getInt(KEY_CAMERA_API, 1) == 2 ? CameraVersion.API_2 : CameraVersion.API_1;
+        // Always, when var is not initialized, it returns Camera V1 regardless of Android SDK lvl, because I am too lazy to handle situations,
+        // when user has Camera API v2 (sdk >= 21) but also has unofficial system (e.g. Cyanogen) and app will be crasing
+        // But user always has possibiity to manually change camera API in settings
     }
 }
