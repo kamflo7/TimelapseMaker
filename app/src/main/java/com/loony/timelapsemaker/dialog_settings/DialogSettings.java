@@ -26,6 +26,7 @@ import android.widget.Toast;
 import com.loony.timelapsemaker.MySharedPreferences;
 import com.loony.timelapsemaker.R;
 import com.loony.timelapsemaker.Util;
+import com.loony.timelapsemaker.camera.CameraVersion;
 import com.loony.timelapsemaker.camera.Resolution;
 
 import java.util.ArrayList;
@@ -45,6 +46,7 @@ public class DialogSettings {
     private int intervalMiliseconds;
     private int photosLimit;
     private boolean webEnabled;
+    private CameraVersion cameraVersion;
 
     public DialogSettings(Context context, FloatingActionButton fab) {
         this.context = context;
@@ -70,6 +72,14 @@ public class DialogSettings {
 
     public void setWebEnabled(boolean enabled) {
         this.webEnabled = enabled;
+    }
+
+    public void setCameraVersion(CameraVersion cameraVersion) {
+        this.cameraVersion = cameraVersion;
+    }
+
+    public CameraVersion getCameraVersion() {
+        return cameraVersion;
     }
 
     public void show() {
@@ -124,7 +134,7 @@ public class DialogSettings {
         options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()));
         options.add(new DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()));
         options.add(new DialogOption(R.drawable.ic_amount, "Limit", getPhotosLimitDescription()));
-        options.add(new DialogOption(R.drawable.ic_sd_storage, "Storage", "Storage location for your timalapses"));
+        options.add(new DialogOption(R.drawable.ic_camera, "Camera API", "Choose camera api version"));
         options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website",
                 webEnabled ? DialogOption.Switch.ENABLED : DialogOption.Switch.DISABLED, new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -225,7 +235,32 @@ public class DialogSettings {
                         dialog.show();
                         break;
                     }
-                    case 3: { // storage
+                    case 3: { // camera api
+                        final MySharedPreferences p = new MySharedPreferences(context);
+                        final CameraVersion cameraVersion = p.getCameraApi();
+
+
+                        String[] items = Build.VERSION.SDK_INT >= 21 ? new String[] {"API 1", "API 2"} : new String[] {"API 1"};
+
+                        final AlertDialog.Builder builder = new AlertDialog.Builder(context);
+                        builder.setTitle(R.string.dialog_choose_camera_api)
+                                .setSingleChoiceItems(items, cameraVersion == CameraVersion.API_1 ? 0 : 1, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialogInterface, int i) {
+                                        if(i != (cameraVersion == CameraVersion.API_1 ? 0 : 1)) {
+                                            CameraVersion versionToChange = i == 1 ? CameraVersion.API_2 : CameraVersion.API_1;
+                                            Util.log("[DialogSettings::CamApi] Changed version to [listItem option %d] It means, camera api = v%d", i, i+1);
+                                            p.setCameraApi(versionToChange);
+                                            String toastMsg = String.format(context.getResources().getString(R.string.dialog_photos_camera_api_toast), i+1);
+                                            Toast.makeText(context, toastMsg, Toast.LENGTH_LONG).show();
+                                            DialogSettings.this.onDialogSettingChangeListener.onCameraApiChange(versionToChange);
+                                        } else {
+                                            Util.log("[DialogSettings::CamApi] Version is remaining the same");
+                                        }
+                                        dialogInterface.dismiss();
+                                    }
+                                });
+                        builder.show();
                         break;
                     }
                     case 4: { // web access
@@ -263,8 +298,6 @@ public class DialogSettings {
                 }
             }
         });
-
-
     }
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
@@ -312,6 +345,7 @@ public class DialogSettings {
         void onChangeInterval(int intervalMiliseconds);
         void onChangePhotosLimit(int amount);
         void onToggleWebServer(boolean toggle);
+        void onCameraApiChange(CameraVersion cameraVersion);
 
         void onDialogExit();
     }

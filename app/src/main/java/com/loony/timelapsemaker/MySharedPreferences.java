@@ -2,6 +2,9 @@ package com.loony.timelapsemaker;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
+
+import com.loony.timelapsemaker.camera.CameraVersion;
 
 /**
  * Created by Kamil on 7/30/2017.
@@ -11,6 +14,7 @@ public class MySharedPreferences {
     private static String FILE_KEY = "com.loony.timelapsemaker.settingsFile";
     private static String KEY_WEB_PASSWORD = "com.loony.timelapsemaker.settingsFile.webpassword";
     private static String KEY_WEB_ENABLED = "com.loony.timelapsemaker.settingsFile.webenabled";
+    private static String KEY_CAMERA_API = "com.loony.timelapsemaker.settingsFile.cameraapi";
 
     SharedPreferences sharedPref;
 
@@ -36,5 +40,15 @@ public class MySharedPreferences {
 
     public boolean getWebEnabled() {
         return sharedPref.getBoolean(KEY_WEB_ENABLED, true);
+    }
+
+    public void setCameraApi(CameraVersion version) {
+        SharedPreferences.Editor editor = sharedPref.edit();
+        editor.putInt(KEY_CAMERA_API, version == CameraVersion.API_1 ? 1 : 2);
+        editor.commit();
+    }
+
+    public CameraVersion getCameraApi() {
+        return sharedPref.getInt(KEY_CAMERA_API, Build.VERSION.SDK_INT >= 21 ? 2 : 1) == 1 ? CameraVersion.API_1 : CameraVersion.API_2;
     }
 }

@@ -15,6 +15,7 @@ import android.widget.Toast;
 import com.loony.timelapsemaker.camera.Camera;
 import com.loony.timelapsemaker.camera.CameraImplV1;
 import com.loony.timelapsemaker.camera.CameraImplV2;
+import com.loony.timelapsemaker.camera.CameraVersion;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -38,14 +39,6 @@ public class Util {
     public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO = "capturedPhoto";
     public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
 
-
-    /*
-    The username and password are combined with a single colon. (:)
-    The resulting string is encoded into an octet sequence.[7]
-    The resulting string is encoded using a variant of Base64.[8]
-    The authorization method and a space is then prepended to the encoded string, separated with a space (e.g. "Basic ").
-    */
-
     public static String makeBasicAuthPassword(String username, String password) {
         String s = username + ":" + password;
         String result = "Basic " + Base64.encodeToString(s.getBytes(), Base64.NO_WRAP);
@@ -53,11 +46,12 @@ public class Util {
     }
 
     public static Camera getAppropriateCamera() {
-        //Random r = new Random();
-        //Camera camera = r.nextBoolean() ? new CameraImplV1() : new CameraImplV2();
-//        Camera camera = new CameraImplV1();
-        Camera camera = new CameraImplV2();
-        Util.log("Returned camera: " + camera.getClass().toString());
+        return getAppropriateCamera(CameraVersion.API_1);
+    }
+
+    public static Camera getAppropriateCamera(CameraVersion cameraVersion) {
+        Camera camera = cameraVersion == CameraVersion.API_1 ? new CameraImplV1() : new CameraImplV2();
+        Util.log("[Util::getAppropriateCamera] Returned camera: " + camera.getClass().toString());
         return camera;
     }
 

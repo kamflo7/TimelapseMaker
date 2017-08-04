@@ -11,6 +11,8 @@ var requestTryCount = 0;
 var unixTimeWhenGotPhoto;
 var lastTimeToNextCaptureMs;
 
+var debugMsgs = false;
+
 $(document).ready(function() {
 	setTimelapseID 	=	function(id="Unknow") 		{	$("#timelapseid").text(id);	}
 	setResolution	=	function(resolution="-"){	$("#resolution").text(resolution);	}
@@ -23,7 +25,7 @@ $(document).ready(function() {
 	setWatchers		=	function(watchers="-")	{	$("#watchers").text(watchers);	}
 	setProgress		=	function(progress) {
 		$("#timelapseProgress").css("width", progress+"%");
-		$("#timelapseProgress").text(progress+"%");
+		$("#timelapseProgress").text(Number(progress).toFixed(0)+"%");
 		$("#timelapseProgress").attr('aria-valuenow', progress);
 	}
 	setDeviceName 	= 	function(name="-") 			{	$("#deviceName").text(name);}
@@ -97,7 +99,9 @@ $(document).ready(function() {
 		
 	var refreshTimeToNextPhoto = function() {
 		var diff = lastTimeToNextCaptureMs - (new Date().getTime() - unixTimeWhenGotPhoto);
-		//console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
+		
+		if(debugMsgs)
+			console.log("lastTimeToNextCaptureMs: " + lastTimeToNextCaptureMs + "; unixTimeWhenGotPhoto: " + unixTimeWhenGotPhoto + "; NOW: " + new Date().getTime() + "; DIFF: " + diff);
 		if(diff < 0) diff = 0;
 		
 		setNextPhotoTime(parseInt(diff/1000) + "s");

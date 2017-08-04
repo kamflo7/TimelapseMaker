@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.os.Build;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -79,10 +80,11 @@ public class NewActivity extends AppCompatActivity {
     private int intervalMiliseconds = 4000;
     private int amountOfPhotos = 20;
     private boolean webEnabled = true;
+    private CameraVersion cameraVersion;
 
     private boolean DEBUG_doNotPreview = false;  // normally: FALSE
     private boolean DEBUG_doNotStartCameraService_in_startTimelapse = false; // normally: FALSE
-    public static final boolean DEBUG_doNotSaveImageInStorageWhenCaptured = true; // normally: FALSE
+    public static final boolean DEBUG_doNotSaveImageInStorageWhenCaptured = false; // normally: FALSE
 
     private void startCountDownToNextPhoto() {
         Util.log("startCountDownToNextPhoto() called");
@@ -176,11 +178,11 @@ public class NewActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        Util.log("This device has android with SDK LEVEL %d", Build.VERSION.SDK_INT);
+
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceContainer = (RelativeLayout) findViewById(R.id.surfaceContainer);
-//        surfaceView = (SurfaceView) findViewById(R.id.surface);
         btnStartTimelapse = (ImageButton) findViewById(R.id.btnStartTimelapse);
-        //btnSettings = (ImageButton) findViewById(R.id.btnSettings);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         statsPanel = (LinearLayout) findViewById(R.id.statsPanel);
         statsWebAccess = (TextView) findViewById(R.id.webAccessTxtContent);
@@ -191,6 +193,7 @@ public class NewActivity extends AppCompatActivity {
 
         MySharedPreferences p = new MySharedPreferences(this);
         webEnabled = p.getWebEnabled();
+        cameraVersion = p.getCameraApi();
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
 
@@ -251,36 +254,12 @@ public class NewActivity extends AppCompatActivity {
         Util.log("___onResume");
 
 
-//        boolean a = true;
-//        if(a) // todo: remporary for dialog testing
-//            return;
-
         if(!isDoingTimelapse) {
             startPreview();
 
-//            if (surfaceHolderCallback != null) {
-//                surfaceView.getHolder().removeCallback(surfaceHolderCallback);
-//            }
-//
-//            surfaceHolderCallback = new SurfaceHolder.Callback() {
-//                @Override
-//                public void surfaceCreated(SurfaceHolder surfaceHolder) {
-//                    obtainedSurfaceHolder = surfaceHolder;
-//                    startPreview(surfaceHolder);
-//                }
-//
-//                @Override
-//                public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i1, int i2) {
-//                }
-//
-//                @Override
-//                public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
-//                }
-//            };
-//
-//            surfaceView.getHolder().addCallback(surfaceHolderCallback);
         } else {
             // todo #1: force retrieve information about current timelapse session statistics? [interval, capturedPhotos, etc]
+            // this is not necessary because Broadcasts are running
         }
     }
 
@@ -295,7 +274,8 @@ public class NewActivity extends AppCompatActivity {
     }
 
     private void getSupportedResolutions() {
-        Camera camera = Util.getAppropriateCamera();
+        Util.log("[NewActivity::getSupportedResolutions]");
+        Camera camera = Util.getAppropriateCamera(cameraVersion);
         try {
             camera.prepare(this);
             this.supportedResolutions = camera.getSupportedPictureSizes();
@@ -316,8 +296,7 @@ public class NewActivity extends AppCompatActivity {
             config.setPhotosLimit(this.amountOfPhotos);
             config.setMilisecondsInterval(this.intervalMiliseconds);
             config.setPictureSize(this.choosenSize);
-            config.setCameraApiVersion(CameraVersion.API_1); //todo: in future, this will depend on user settings, and by default the android version will be deciding
-                                                            // don't know what about CyanogenMod 13 (android 6.0) on smartphone officialy android max 4.2 - will be the camera2 working?
+            config.setCameraApiVersion(cameraVersion);
 
             startTimelapse(config);
         } else {
@@ -328,12 +307,13 @@ public class NewActivity extends AppCompatActivity {
     public void btnSettingActionClick(View v) {
         stopPreviewIfDoes();
 
-        Util.log("Settings click");
+        Util.log("[NewActivity::btnSettingActionClick]");
         DialogSettings dialogSettings = new DialogSettings(this, fab);
         dialogSettings.giveSupportedResolutions(supportedResolutions, choosenSize);
         dialogSettings.setInterval(intervalMiliseconds);
         dialogSettings.setPhotosLimit(amountOfPhotos);
         dialogSettings.setWebEnabled(webEnabled);
+        dialogSettings.setCameraVersion(cameraVersion);
         dialogSettings.setOnDialogSettingChangeListener(new DialogSettings.OnDialogSettingChangeListener() {
             @Override
             public void onChangePhotoResolution(Resolution resolution) {
@@ -360,6 +340,11 @@ public class NewActivity extends AppCompatActivity {
             public void onToggleWebServer(boolean toggle) {
                 NewActivity.this.webEnabled = toggle;
                 updateUIWebAccess();
+            }
+
+            @Override
+            public void onCameraApiChange(CameraVersion cameraVersion) {
+                NewActivity.this.cameraVersion = cameraVersion;
             }
         });
         dialogSettings.show();
@@ -475,11 +460,11 @@ public class NewActivity extends AppCompatActivity {
         surfaceViewProgrammatically.getHolder().addCallback(new SurfaceHolder.Callback() {
             @Override
             public void surfaceCreated(SurfaceHolder surfaceHolder) {
-                camera = Util.getAppropriateCamera();
+                camera = Util.getAppropriateCamera(NewActivity.this.cameraVersion);
                 try {
                     obtainedSurfaceHolder = surfaceHolder;
                     camera.prepare(NewActivity.this);
-                    Util.log("startPreview with resolution " + choosenSize.getWidth() + "x" + choosenSize.getHeight());
+                    Util.log("startPreview with resolution " + choosenSize.getWidth() + "x" + choosenSize.getHeight()); // todo: bug, choosenSize is NULL after start
                     camera.setOutputSize(choosenSize);
                     surfaceHolder.setFixedSize(choosenSize.getWidth(), choosenSize.getHeight());
                     camera.openForPreview(surfaceHolder);

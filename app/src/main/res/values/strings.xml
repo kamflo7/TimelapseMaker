@@ -3,20 +3,22 @@
     <string name="dialog_choose_resolution">Choose photo resolution</string>
     <string name="dialog_choose_interval">Choose time interval (seconds)</string>
     <string name="dialog_choose_amount_photos">Limit photos</string>
+    <string name="dialog_choose_camera_api">Choose camera api version</string>
 
     <!-- DialogSettings descriptions (below TextView) -->
     <string name="dialog_resolution_description">Current resolution is %1$dx%2$d</string>
     <string name="dialog_interval_description">Each photo is captured every %1$s seconds</string>
     <string name="dialog_photos_limit_description">It will capture %1$d photos</string>
+    <string name="dialog_photos_camera_api_toast">You have successully changed API version to %1$d</string>
 
     <string name="text_enabled">Enabled</string>
     <string name="text_disabled">Disabled</string>
 
 
-    <string name="test_multiscreen">Not specified</string>
+    <string name="test_multiscreen">Timelapse settings</string>
+
     <string name="text_dialog_change_password_success">You have successfully changed the web password</string>
     <string name="text_dialog_webserver_toggleOn">You have turned on the web server</string>
     <string name="text_dialog_webserver_toggleOff">You have turned off the web server</string>
-
 
 </resources>
