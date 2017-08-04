@@ -70,7 +70,6 @@ $(document).ready(function() {
 				$("#outputImage").attr("src", "data:image/png;base64,"
 					+ json.image);
 				
-				//setWatchers
 				
 				unixTimeWhenGotPhoto = new Date().getTime();
 				lastTimeToNextCaptureMs = parseInt(json.timeMsToNextCapture);
@@ -78,8 +77,8 @@ $(document).ready(function() {
 				var timeToNextCall = lastTimeToNextCaptureMs > 0 ? (lastTimeToNextCaptureMs + 500) : json.intervalMiliseconds;
 				
 				
-				if(json.timelapseStatus == "doing")
-					setTimeout(function() { requestData(); }, timeToNextCall);
+				//if(json.timelapseStatus == "doing")
+				setTimeout(function() { requestData(); }, timeToNextCall);
 			},
 			error: function(xhr, ajaxOptions, thrownError) {
 				requestTryCount++;

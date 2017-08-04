@@ -59,7 +59,7 @@ public class HttpServer extends NanoHTTPD {
         FINISHED,
         FINISHED_FAILED
     };
-    private Status status = Status.DOING;
+//    private Status status = Status.DOING;
 
     private Map<String, Long> clientsIp;
 
@@ -105,9 +105,9 @@ public class HttpServer extends NanoHTTPD {
                     makeBase64image(image);
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED)) {
                     capturedPhotos++;
-                    status = Status.FINISHED;
+//                    status = Status.FINISHED;
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
-                    status = Status.FINISHED_FAILED;
+//                    status = Status.FINISHED_FAILED;
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_INIT_TIMELAPSE_CONTROLLER)) {
                     timelapseID = intent.getStringExtra("timelapseDirectory");
                 }
@@ -172,7 +172,7 @@ public class HttpServer extends NanoHTTPD {
                     .put("maxPhotos", maxPhotos)
                     .put("timeMsToNextCapture", intervalMilisecond - (System.currentTimeMillis() - timeOfLastPhotoCapture))
                     .put("image", base64image)
-                    .put("timelapseStatus", status == Status.DOING ? "doing" : (status == Status.FINISHED ? "finished" : "failed"))
+//                    .put("timelapseStatus", status == Status.DOING ? "doing" : (status == Status.FINISHED ? "finished" : "failed"))
                     .put("watchers", countWatchers);
         } catch (JSONException e) {
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");

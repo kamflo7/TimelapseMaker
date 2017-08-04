@@ -9,6 +9,8 @@
     <string name="dialog_resolution_description">Current resolution is %1$dx%2$d</string>
     <string name="dialog_interval_description">Each photo is captured every %1$s seconds</string>
     <string name="dialog_photos_limit_description">It will capture %1$d photos</string>
+    <string name="dialog_photos_camera_api_description">Choose camera api version (current: v%1$d)</string>
+
     <string name="dialog_photos_camera_api_toast">You have successully changed API version to %1$d</string>
 
     <string name="text_enabled">Enabled</string>

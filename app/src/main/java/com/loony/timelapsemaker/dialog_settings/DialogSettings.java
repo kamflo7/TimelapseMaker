@@ -128,13 +128,17 @@ public class DialogSettings {
         return String.format(context.getResources().getString(R.string.dialog_resolution_description), choosenSize.getWidth(), choosenSize.getHeight());
     }
 
+    private String getCameraApiDescription() {
+        return String.format(context.getResources().getString(R.string.dialog_photos_camera_api_description), cameraVersion == CameraVersion.API_1 ? 1 : 2);
+    }
+
     private void setListViewClickListenerForBasicCategory(ListView listView) {
 
         final ArrayList<DialogOption> options = new ArrayList<>();
         options.add(new DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()));
         options.add(new DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()));
         options.add(new DialogOption(R.drawable.ic_amount, "Limit", getPhotosLimitDescription()));
-        options.add(new DialogOption(R.drawable.ic_camera, "Camera API", "Choose camera api version"));
+        options.add(new DialogOption(R.drawable.ic_camera, "Camera API", getCameraApiDescription()));
         options.add(new DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website",
                 webEnabled ? DialogOption.Switch.ENABLED : DialogOption.Switch.DISABLED, new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -251,9 +255,12 @@ public class DialogSettings {
                                             CameraVersion versionToChange = i == 1 ? CameraVersion.API_2 : CameraVersion.API_1;
                                             Util.log("[DialogSettings::CamApi] Changed version to [listItem option %d] It means, camera api = v%d", i, i+1);
                                             p.setCameraApi(versionToChange);
+                                            DialogSettings.this.cameraVersion = versionToChange;
+                                            options.get(3).description = getCameraApiDescription();
                                             String toastMsg = String.format(context.getResources().getString(R.string.dialog_photos_camera_api_toast), i+1);
                                             Toast.makeText(context, toastMsg, Toast.LENGTH_LONG).show();
                                             DialogSettings.this.onDialogSettingChangeListener.onCameraApiChange(versionToChange);
+                                            adapter.notifyDataSetChanged();
                                         } else {
                                             Util.log("[DialogSettings::CamApi] Version is remaining the same");
                                         }

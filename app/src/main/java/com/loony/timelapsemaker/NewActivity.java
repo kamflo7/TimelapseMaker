@@ -408,6 +408,7 @@ public class NewActivity extends AppCompatActivity {
         updateUIentire();
         startCountDownToNextPhoto();
 
+        fab.setVisibility(View.GONE);
         Util.log("Started timelapse");
     }
 
@@ -436,10 +437,7 @@ public class NewActivity extends AppCompatActivity {
         isDoingTimelapse = false;
         updateUIentire();
 
-//        Intent i = getIntent();
-//        finish();
-//        startActivity(i);
-
+        fab.setVisibility(View.VISIBLE);
     }
 
     private void startPreview() {
@@ -487,9 +485,6 @@ public class NewActivity extends AppCompatActivity {
     }
 
     private void stopPreviewIfDoes() {
-//        if(surfaceHolderCallback != null)
-//            surfaceView.getHolder().removeCallback(surfaceHolderCallback);
-
         try {
             camera.close();
             camera = null;
