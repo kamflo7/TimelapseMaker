@@ -156,17 +156,9 @@ public class NewActivity extends AppCompatActivity {
     private void updateUIWebAccess() {
         if(isDoingTimelapse) {
             if(webEnabled) {
-                ConnectivityManager connManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-                NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
-
-                if (mWifi.isConnected()) {
                     String ip = Util.getLocalIpAddress(true);
                     statsWebAccess.setText(ip+":"+HttpServer.PORT);
                     statsWebAccess.setTextColor(this.getResources().getColor(R.color.statsPanel_enabled));
-                } else {
-                    statsWebAccess.setText("Wifi off");
-                    statsWebAccess.setTextColor(this.getResources().getColor(R.color.statsPanel_disabled));
-                }
             } else {
                 statsWebAccess.setText(R.string.text_disabled);
                 statsWebAccess.setTextColor(this.getResources().getColor(R.color.statsPanel_disabled));
@@ -368,11 +360,9 @@ public class NewActivity extends AppCompatActivity {
             if(msg != null) {
                 if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED)) {
                     Toast.makeText(NewActivity.this, "Timelapse has been done", Toast.LENGTH_LONG).show();
-                    Util.log("-----> NewActivity:Broadcast FINISHED");
                     stopTimelapse();
                     startPreview();
                 } else if(msg.equals(Util.BROADCAST_MESSAGE_FINISHED_FAILED)) {
-                    Util.log("-----> NewActivity:Broadcast FINISHED FAILED");
                     if(isDoingTimelapse)
                         stopTimelapse();
 
@@ -425,7 +415,7 @@ public class NewActivity extends AppCompatActivity {
 
     // stopService(), unbindService(), set 'isDoingTimelapse' flag, UI: change icon
     private void stopTimelapse() {
-        Util.log("____NewActivity::stopTimelapse() called");
+        Util.log("NewActivity::stopTimelapse() called");
 
         if(threadCountdown != null)
             stopCountDownToNextPhoto();

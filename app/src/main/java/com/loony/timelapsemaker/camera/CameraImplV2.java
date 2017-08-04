@@ -92,7 +92,6 @@ public class CameraImplV2 implements Camera {
         if(backgroundThread == null)
             return;
 
-        //backgroundThread.quitSafely();
         backgroundThread.quit();
 
         // here was problem in case of capturingPhotos, not previewing
@@ -123,8 +122,6 @@ public class CameraImplV2 implements Camera {
         if(outputSize == null) // should be another name for this exception, but this is small simple project, so who cares
             throw new CameraNotAvailableException("Output size is not defined");
 
-        //dummySurface = new SurfaceTexture(10);
-        //dummySurface.setDefaultBufferSize(outputSize.getWidth(), outputSize.getHeight());
         previewSurface = surfaceHolder.getSurface();
         startBackgroundThread();
 
@@ -189,12 +186,10 @@ public class CameraImplV2 implements Camera {
                 image.close();
 
                 onPhotoCaptureListener.onCreate(bytes);
-                Util.log("OnImageAvailableListener called");
             }
         }, backgroundHandler);
 
         try {
-            if(backgroundHandler == null || backgroundThread == null) Util.log("MAM NULLA");
             cameraManager.openCamera(cameraID, new CameraDevice.StateCallback() {
                 @Override
                 public void onOpened(@NonNull CameraDevice cameraDevice) {
@@ -262,9 +257,7 @@ public class CameraImplV2 implements Camera {
                 previewRequestBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);
                 previewRequest = previewRequestBuilder.build();
 
-                //startedRepeatedRequest = false;
                 try {
-                    //Util.log("__createCameraPreviewSession (equals?) THREAD_ID: " + Thread.currentThread().getId());
                     captureSession.setRepeatingRequest(previewRequest, captureCallback, backgroundHandler);
                     if(onCameraStateChangeListener != null)
                         onCameraStateChangeListener.onCameraOpen(); // todo: Not sure whether this is a best place
@@ -286,10 +279,6 @@ public class CameraImplV2 implements Camera {
 
     private CameraCaptureSession.CaptureCallback captureCallback = new CameraCaptureSession.CaptureCallback() {
         private void process(CaptureResult result) throws CameraAccessException {
-            /*if(!startedRepeatedRequest) {
-                listenerStateChange.onCameraOpen();
-                startedRepeatedRequest = true;
-            }*/
 
             switch(captureState) {
                 case STATE_PREVIEW: {
@@ -298,9 +287,6 @@ public class CameraImplV2 implements Camera {
                 case STATE_WAITING_LOCK: {
                     Integer afState = result.get(CaptureResult.CONTROL_AF_STATE);
                     Float lensDistance = result.get(CaptureResult.LENS_FOCUS_DISTANCE);
-
-                    //if(lensDistance != null) lastLens = lensDistance.floatValue();
-                    //waitingLockCount++;
 
                     if (afState == null) {
                         captureStillPicture();
@@ -370,12 +356,11 @@ public class CameraImplV2 implements Camera {
     };
 
     private void captureStillPicture() throws CameraAccessException {
-        //Util.log("__captureStillPicture (final): another thread? THREAD_ID: " + Thread.currentThread().getId());
         final CaptureRequest.Builder captureBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE);
 
         Surface surfaceTarget = imageReader.getSurface();
         captureBuilder.addTarget(surfaceTarget);
-        captureBuilder.set(CaptureRequest.JPEG_QUALITY, (byte) 90);
+        captureBuilder.set(CaptureRequest.JPEG_QUALITY, (byte) 97);
         setCameraOrientation(captureBuilder);
         captureBuilder.set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE);// Use the same AE and AF modes as the preview.
 
