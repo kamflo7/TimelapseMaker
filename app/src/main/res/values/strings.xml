@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">TimelapseMaker</string>
+
+    <string name="foreground_preparing">Preparing camera for capture..</string>
+    <string name="foreground_capturing">Captured %1$d of %2$d photos</string>
+
     <string name="dialog_choose_resolution">Choose photo resolution</string>
     <string name="dialog_choose_interval">Choose time interval (seconds)</string>
     <string name="dialog_choose_amount_photos">Limit photos</string>

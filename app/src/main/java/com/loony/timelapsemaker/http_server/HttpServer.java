@@ -178,10 +178,7 @@ public class HttpServer extends NanoHTTPD {
             return newFixedLengthResponse(Response.Status.INTERNAL_ERROR, MIME_PLAINTEXT, "Internal error");
         }
 
-
         String response = dataJson.toString();
-
-//        Util.log("Someone is requesting data, data: " + response);
         return newFixedLengthResponse(response);
     }
 

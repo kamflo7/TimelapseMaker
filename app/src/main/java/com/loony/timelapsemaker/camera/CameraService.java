@@ -7,6 +7,7 @@ import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Binder;
+import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
@@ -50,7 +51,7 @@ public class CameraService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1));
+        startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1, -1));
     }
 
     @Override
@@ -103,6 +104,7 @@ public class CameraService extends Service {
                             i.putExtra(Util.BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT, capturedPhotos);
                             i.putExtra("imageBytes", capturedImage);
                             LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
+                            updateNotificationMadePhotos(capturedPhotos, timelapseConfig.getPhotosLimit());
                         }
                     });
                 } catch (CameraNotAvailableException e) {
@@ -118,30 +120,30 @@ public class CameraService extends Service {
         return super.onStartCommand(intent, flags, startId);
     }
 
-    private Notification getMyNotification(int type, int additionalArg) {
+    private Notification getMyNotification(int type, int capturedPhotos, int maxPhotos) {
         Intent notificationIntent = new Intent(this, NewActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, 0);
 
         String text = "";
         switch(type) {
             case NOTIFICATION_TYPE_START:
-                text = "Preparing camera to capture..";
+                text = getApplicationContext().getResources().getString(R.string.foreground_preparing);
                 break;
             case NOTIFICATION_TYPE_CAPTURE:
-                text = "Captured " + additionalArg + " photos";
+                text = String.format(getApplicationContext().getResources().getString(R.string.foreground_capturing), capturedPhotos, maxPhotos);
                 break;
         }
 
         Notification notification = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.mipmap.my_icon)
+                .setSmallIcon(Build.VERSION.SDK_INT >= 21 ? R.mipmap.my_icon_white : R.mipmap.my_icon)
                 .setContentTitle("TimelapseMaker")
                 .setContentText(text)
                 .setContentIntent(pendingIntent).build();
         return notification;
     }
 
-    private void updateNotificationMadePhotos(int amount) {
-        Notification notification = getMyNotification(NOTIFICATION_TYPE_CAPTURE, amount);
+    private void updateNotificationMadePhotos(int photosCaptured, int maxPhotos) {
+        Notification notification = getMyNotification(NOTIFICATION_TYPE_CAPTURE, photosCaptured, maxPhotos);
 
         NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(NOTIFICATION_ID, notification);
