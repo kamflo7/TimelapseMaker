@@ -213,7 +213,7 @@ public class DialogSettings {
                     case 2: { // photos limit
                         final NumberPicker numberPicker = new NumberPicker(context);
                         numberPicker.setMinValue(3);
-                        numberPicker.setMaxValue(1000);
+                        numberPicker.setMaxValue(5000);
                         numberPicker.setValue(photosLimit);
 
                         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
