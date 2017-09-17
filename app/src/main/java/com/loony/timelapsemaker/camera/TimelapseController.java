@@ -39,8 +39,12 @@ public class TimelapseController {
     public void start(OnTimelapseStateChangeListener onTimelapseStateChangeListener) throws CameraNotAvailableException {
         this.onTimelapseStateChangeListener = onTimelapseStateChangeListener;
 
-        storageManager = new StorageManager();
-        if(!storageManager.isExternalStorageAvailable()) {
+        storageManager = new StorageManager(context);
+//        if(!storageManager.isExternalStorageAvailable()) {
+//            this.onTimelapseStateChangeListener.onFail();
+//            return;
+//        }
+        if(!storageManager.isRealExternalStorageAvailable()) {
             this.onTimelapseStateChangeListener.onFail();
             return;
         }
@@ -112,7 +116,7 @@ public class TimelapseController {
     };
 
     public void stop() {
-        if(wakeLock.isHeld())
+        if(wakeLock != null && wakeLock.isHeld())
             wakeLock.release();
 
         if(camera != null) {

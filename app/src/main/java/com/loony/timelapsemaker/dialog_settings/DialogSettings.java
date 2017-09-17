@@ -162,7 +162,9 @@ public class DialogSettings {
                     case 0: { // resolution
                         final String[] resOptions = new String[supportedResolutions.length];
                         for(int i=0; i<resOptions.length; i++)
-                            resOptions[i] = String.format("%dx%d", supportedResolutions[i].getWidth(), supportedResolutions[i].getHeight());
+                            resOptions[i] = String.format("%dx%d (%.02f)",
+                                    supportedResolutions[i].getWidth(), supportedResolutions[i].getHeight(),
+                                    supportedResolutions[i].getWidth()/(float) supportedResolutions[i].getHeight());
 
                         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
                         builder.setTitle(R.string.dialog_choose_resolution)

@@ -52,6 +52,7 @@ public class CameraService extends Service {
     public void onCreate() {
         super.onCreate();
         startForeground(NOTIFICATION_ID, getMyNotification(NOTIFICATION_TYPE_START, -1, -1));
+        Util.log("=== CameraService::onCreate");
     }
 
     @Override
@@ -60,7 +61,10 @@ public class CameraService extends Service {
             Util.log("CameraService::onStartCommand is null, fatal exception; have a look at this");
             stopSelf();
             return START_NOT_STICKY;
+//            return START_STICKY;
         }
+
+        Util.log("=== CameraService::onStartCommand");
 
         //Intent i = getSendingMessageIntent(Util.BROADCAST_MESSAGE_FINISHED);
         //LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(i);
@@ -117,7 +121,9 @@ public class CameraService extends Service {
         worker.start();
         worker.waitUntilReady();
         worker.handler.post(runnable);
-        return super.onStartCommand(intent, flags, startId);
+
+//        return super.onStartCommand(intent, flags, startId);
+        return START_NOT_STICKY;
     }
 
     private Notification getMyNotification(int type, int capturedPhotos, int maxPhotos) {
@@ -187,7 +193,13 @@ public class CameraService extends Service {
         stopForeground(true);
         if(worker != null) worker.quit();
         super.onDestroy();
-        Util.log("CameraService::onDestroy() called"); //ok
+        Util.log("=== CameraService::onDestroy() called"); //ok
+    }
+
+    @Override
+    public void onLowMemory() {
+        Util.log("CameraService::onLowMemory()");
+        super.onLowMemory();
     }
 
     public class LocalBinder extends Binder {

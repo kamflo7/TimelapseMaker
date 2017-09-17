@@ -68,6 +68,11 @@ public class CameraImplV1 implements com.loony.timelapsemaker.camera.Camera {
 
     @Override
     public void capturePhoto() {
+        Camera.Parameters params = camera.getParameters();
+        params.setPictureSize(outputSize.getWidth(), outputSize.getHeight());
+
+        camera.setParameters(params);
+
         camera.startPreview();
 
         camera.takePicture(null, null, new Camera.PictureCallback() {

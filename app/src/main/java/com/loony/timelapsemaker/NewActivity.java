@@ -13,6 +13,7 @@ import android.graphics.Canvas;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.Build;
+import android.os.Environment;
 import android.os.IBinder;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -24,6 +25,7 @@ import android.os.Bundle;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -39,6 +41,9 @@ import com.loony.timelapsemaker.camera.exceptions.CameraNotAvailableException;
 import com.loony.timelapsemaker.dialog_settings.DialogSettings;
 import com.loony.timelapsemaker.http_server.HttpServer;
 import com.loony.timelapsemaker.http_server.HttpService;
+
+import java.io.File;
+import java.util.Map;
 
 public class NewActivity extends AppCompatActivity {
     public static final int REQUEST_PERMISSIONS = 0x1;
@@ -79,8 +84,8 @@ public class NewActivity extends AppCompatActivity {
     // vars which are setting by (dialog & shared prefs)
     private @Nullable Resolution[] supportedResolutions;
     private Resolution choosenSize;
-    private int intervalMiliseconds = 4000;
-    private int amountOfPhotos = 20;
+    private int intervalMiliseconds = 6000;
+    private int amountOfPhotos = 1000;
     private boolean webEnabled = true;
     private CameraVersion cameraVersion;
 
@@ -181,7 +186,28 @@ public class NewActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        Util.log("This device has android with SDK LEVEL %d", Build.VERSION.SDK_INT);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        Util.log("[NewActivity::onCreate] This device has android with SDK LEVEL %d", Build.VERSION.SDK_INT);
+
+//        String[] sds = StorageManager.getStorageDirectories();
+//        Util.log("Available sd directories:");
+//        for(String d : sds)
+//            Util.log("Directory: " + d);
+
+//        File f = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+//        Util.log("externalStoragePublicDic: " + f.getAbsolutePath());
+
+//        Map<String, File> externalLocations = ExternalStorage.getAllStorageLocations();
+//        File sdCard = externalLocations.get(ExternalStorage.SD_CARD);
+//        File externalSdCard = externalLocations.get(ExternalStorage.EXTERNAL_SD_CARD);
+//
+//        Util.log("[ExternalLocations] sdCard: %s; extSdCard: %s", sdCard==null ? "null" : sdCard.getAbsolutePath(), externalSdCard==null ? "null" : externalSdCard.getAbsolutePath());
+
+//        File f = new File("/storage/4542-1EE5/");
+//        Util.log("extSd EXISTS: " + f.exists());
+
+
+
 
         setContentView(R.layout.activity_new); // should be some ButterKnife, maybe later
         surfaceContainer = (RelativeLayout) findViewById(R.id.surfaceContainer);
@@ -200,33 +226,57 @@ public class NewActivity extends AppCompatActivity {
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, new IntentFilter(Util.BROADCAST_FILTER));
 
-        if(savedInstanceState == null) { // FIRST START APP; OTHERWISE AFTER CRASH
+        Util.log("NewActivity::onCreate&HttpService running (should TRUE if activated): " + Util.isMyServiceRunning(this, HttpService.class));
+
+        if(Util.isMyServiceRunning(this, CameraService.class)) {
+            Util.log("NewActivity::onCreate&CameraService running, need UI refresh...");
+            Toast.makeText(this, "NewActivity::onCreate&CameraService running, need UI refresh...", Toast.LENGTH_LONG).show();
+            // REMOVED BINDING
+            // so IS NOT possible to directly get timelapse state. Need to use some BroadcastReceiver
+
+            //bindToCameraService();
+//            if(cameraService.getTimelapseState() == CameraService.TimelapseState.NOT_FINISHED) {
+//                Util.log("NewActivity::onCreate, savedInstanceState not null=crash, CameraService is running, TimelapseController is also running 3/3");
+//                isDoingTimelapse = true;
+//                btnStartTimelapse.setImageResource(R.drawable.stop);
+//                updateUIentire();
+//            }
+        } else {
             if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
                 ActivityCompat.requestPermissions(this, Util.NECESSARY_PERMISSIONS_START_APP, REQUEST_PERMISSIONS);
             } else {
                 getSupportedResolutions();
                 updateUIentire();
             }
-        } else {
-            Util.log("NewActivity::onCreate, savedInstanceState not null=crash 1/3");
-            if(Util.isMyServiceRunning(this, CameraService.class)) {
-                Util.log("NewActivity::onCreate, savedInstanceState not null=crash, CameraService is running 2/3");
-                bindToCameraService();
-                if(cameraService.getTimelapseState() == CameraService.TimelapseState.NOT_FINISHED) {
-                    Util.log("NewActivity::onCreate, savedInstanceState not null=crash, CameraService is running, TimelapseController is also running 3/3");
-                    isDoingTimelapse = true;
-                    btnStartTimelapse.setImageResource(R.drawable.stop);
-                    updateUIentire();
-                }
-            } else {
-                getSupportedResolutions();
-                updateUIentire();
-            }
-
-            if(Util.isMyServiceRunning(this, HttpService.class)) {
-                bindToHttpService();
-            }
         }
+
+//        if(savedInstanceState == null) { // FIRST START APP; OTHERWISE AFTER CRASH
+//            if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
+//                ActivityCompat.requestPermissions(this, Util.NECESSARY_PERMISSIONS_START_APP, REQUEST_PERMISSIONS);
+//            } else {
+//                getSupportedResolutions();
+//                updateUIentire();
+//            }
+//        } else {
+//            Util.log("NewActivity::onCreate, savedInstanceState not null=crash 1/3");
+//            if(Util.isMyServiceRunning(this, CameraService.class)) {
+//                Util.log("NewActivity::onCreate, savedInstanceState not null=crash, CameraService is running 2/3");
+//                bindToCameraService();
+//                if(cameraService.getTimelapseState() == CameraService.TimelapseState.NOT_FINISHED) {
+//                    Util.log("NewActivity::onCreate, savedInstanceState not null=crash, CameraService is running, TimelapseController is also running 3/3");
+//                    isDoingTimelapse = true;
+//                    btnStartTimelapse.setImageResource(R.drawable.stop);
+//                    updateUIentire();
+//                }
+//            } else {
+//                getSupportedResolutions();
+//                updateUIentire();
+//            }
+//
+//            if(Util.isMyServiceRunning(this, HttpService.class)) {
+//                bindToHttpService();
+//            }
+//        }
     }
 
     @Override // startCountDownToNextPhoto
@@ -237,7 +287,7 @@ public class NewActivity extends AppCompatActivity {
             startCountDownToNextPhoto();
         }
 
-        Util.log("___onStart");
+        Util.log("NewActivity___onStart");
     }
 
     @Override // stopCountDownToNextPhoto
@@ -248,16 +298,16 @@ public class NewActivity extends AppCompatActivity {
             stopCountDownToNextPhoto();
         }
 
-        Util.log("___onStop");
+        Util.log("NewActivity ___onStop");
     }
 
     @Override // just startPreview() in SurfaceView callback
     protected void onResume() {
         super.onResume();
-        Util.log("___onResume");
+        Util.log("NewActivity___onResume");
 
 
-        if(!isDoingTimelapse) {
+        if(!isDoingTimelapse && !Util.isMyServiceRunning(this, CameraService.class)) {
             startPreview();
 
         } else {
@@ -269,7 +319,7 @@ public class NewActivity extends AppCompatActivity {
     @Override // just stopPreviewIfDoes() if previewing
     protected void onPause() {
         super.onPause();
-        Util.log("___onPause");
+        Util.log("NewActivity___onPause");
 
         if(camera != null) {
             stopPreviewIfDoes();
@@ -373,12 +423,14 @@ public class NewActivity extends AppCompatActivity {
                     byte[] lastImg = intent.getByteArrayExtra("imageBytes");
                     updateUIphotosCaptured();
 
-                    Canvas c = obtainedSurfaceHolder.lockCanvas();
-                    if(c != null) {
-                        Bitmap bitmap = BitmapFactory.decodeByteArray(lastImg, 0, lastImg.length);
-                        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, c.getWidth(), c.getHeight(), true);
-                        c.drawBitmap(scaled, 0, 0, null);
-                        obtainedSurfaceHolder.unlockCanvasAndPost(c);
+                    if(obtainedSurfaceHolder != null) {
+                        Canvas c = obtainedSurfaceHolder.lockCanvas();
+                        if (c != null) {
+                            Bitmap bitmap = BitmapFactory.decodeByteArray(lastImg, 0, lastImg.length);
+                            Bitmap scaled = Bitmap.createScaledBitmap(bitmap, c.getWidth(), c.getHeight(), true);
+                            c.drawBitmap(scaled, 0, 0, null);
+                            obtainedSurfaceHolder.unlockCanvasAndPost(c);
+                        }
                     }
                 }
             }
@@ -392,12 +444,14 @@ public class NewActivity extends AppCompatActivity {
 
         if(!DEBUG_doNotStartCameraService_in_startTimelapse) {
             startCameraService(timelapseConfig);
-            bindToCameraService();
+            //bindToCameraService();
+            Util.log("NewActivity::startTimelapse() after starting and binding to CameraService. Checking if service is running - should appear below 'CameraService'");
+            Util.isMyServiceRunning(this, CameraService.class);
         }
 
         if(webEnabled) {
             startHttpService(timelapseConfig);
-            bindToHttpService();
+//            bindToHttpService();
         }
 
         isDoingTimelapse = true;
@@ -423,16 +477,16 @@ public class NewActivity extends AppCompatActivity {
         btnStartTimelapse.setImageResource(R.drawable.record);
 
         if(cameraServiceBound) {
-            unbindService(cameraConnection);
+            //unbindService(cameraConnection);
             cameraServiceBound = false; // because cameraConnection callback#onDisconnect does not execute immediately - at the same time Activity gets
             // broadcast message about finishing timelapse, and that also calls stopTimelapse() where 'cameraServiceBound' is TRUE still! which provides to exceptions
         }
         stopCameraService();
 
-        if(httpServiceBound) {
-            unbindService(httpConnection);
-            httpServiceBound = false;
-        }
+//        if(httpServiceBound) {
+//            unbindService(httpConnection);
+//            httpServiceBound = false;
+//        }
         stopHttpService();
 
         isDoingTimelapse = false;
@@ -584,19 +638,19 @@ public class NewActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Util.log("___onDestroy");
+        Util.log("NewAcitivity___onDestroy");
 
-        if(isDoingTimelapse) {
-            stopCameraService();
-            isDoingTimelapse = false;
-        }
+//        if(isDoingTimelapse) {
+//            stopCameraService();
+//            isDoingTimelapse = false;
+//        }
 
-        if(cameraServiceBound)
-            unbindService(cameraConnection);
+//        if(cameraServiceBound)
+//            unbindService(cameraConnection);
 
-        if(httpServiceBound) {
-            unbindService(httpConnection);
-            stopHttpService();
-        }
+//        if(httpServiceBound) {
+//            unbindService(httpConnection);
+//            stopHttpService();
+//        }
     }
 }

@@ -108,6 +108,11 @@ public class Util {
     public static boolean isMyServiceRunning(Context context, Class<?> serviceClass) {
         ActivityManager manager = (ActivityManager) context.getSystemService(Context.ACTIVITY_SERVICE);
         for (ActivityManager.RunningServiceInfo service : manager.getRunningServices(Integer.MAX_VALUE)) {
+            if(!service.service.getClassName().contains("com.loony.timelapsemaker"))
+                continue;
+
+            Util.log("[Util::isMyServiceRunning][forEach] [className: %s] [process: %s] [pid: %d] [activeSince: %d]",
+                    service.service.getClassName(), service.process, service.pid, service.activeSince);
             if (serviceClass.getName().equals(service.service.getClassName())) {
                 return true;
             }
@@ -181,5 +186,9 @@ public class Util {
             }
         }
         return true;
+    }
+
+    public interface Function {
+        void execute();
     }
 }

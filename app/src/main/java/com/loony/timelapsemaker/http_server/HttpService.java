@@ -44,7 +44,8 @@ public class HttpService extends Service {
             e.printStackTrace();
         }
 
-        return super.onStartCommand(intent, flags, startId);
+//        return super.onStartCommand(intent, flags, startId);
+        return START_NOT_STICKY;
     }
 
     @Nullable
@@ -63,6 +64,7 @@ public class HttpService extends Service {
         if(server != null)
             server.stop();
 
+        Util.log("HttpService::onDestroy()");
         super.onDestroy();
     }
 
