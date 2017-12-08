@@ -1,4 +1,4 @@
-package com.loony.timelapsemaker;
+package pl.kflorczyk.timelapsemaker;
 
 import org.junit.Test;
 

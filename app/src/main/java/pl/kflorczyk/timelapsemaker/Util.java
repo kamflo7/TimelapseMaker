@@ -1,4 +1,4 @@
-package com.loony.timelapsemaker;
+package pl.kflorczyk.timelapsemaker;
 
 import android.Manifest;
 import android.app.ActivityManager;
@@ -14,33 +14,17 @@ import android.util.Base64;
 import android.util.Log;
 import android.widget.Toast;
 
-import com.loony.timelapsemaker.camera.Camera;
-import com.loony.timelapsemaker.camera.CameraImplV1;
-import com.loony.timelapsemaker.camera.CameraImplV2;
-import com.loony.timelapsemaker.camera.CameraVersion;
-
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 
 /**
  * Created by Kamil on 11/13/2016.
  */
 
 public class Util {
-    public static final String BROADCAST_FILTER = "com.loony.timelapsemaker.camera.CameraService";
-    public static final String BROADCAST_MESSAGE = "action";
-
-    public static final String BROADCAST_MESSAGE_INIT_TIMELAPSE_CONTROLLER = "initControllerTimelapse";
-    public static final String BROADCAST_MESSAGE_FINISHED = "finished";
-    public static final String BROADCAST_MESSAGE_FINISHED_FAILED = "finishedWithFail";
-
-    public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO = "capturedPhoto";
-    public static final String BROADCAST_MESSAGE_CAPTURED_PHOTO_AMOUNT = "capturedPhotoAmount";
-
 
     public static String getApplicationVersion(Context context) {
         String version = "";
@@ -62,15 +46,15 @@ public class Util {
         return result;
     }
 
-    public static Camera getAppropriateCamera() {
-        return getAppropriateCamera(CameraVersion.API_1);
-    }
-
-    public static Camera getAppropriateCamera(CameraVersion cameraVersion) {
-        Camera camera = cameraVersion == CameraVersion.API_1 ? new CameraImplV1() : new CameraImplV2();
-        Util.log("[Util::getAppropriateCamera] Returned camera: " + camera.getClass().toString());
-        return camera;
-    }
+//    public static Camera getAppropriateCamera() {
+//        return getAppropriateCamera(CameraVersion.API_1);
+//    }
+//
+//    public static Camera getAppropriateCamera(CameraVersion cameraVersion) {
+//        Camera camera = cameraVersion == CameraVersion.API_1 ? new CameraImplV1() : new CameraImplV2();
+//        Util.log("[Util::getAppropriateCamera] Returned camera: " + camera.getClass().toString());
+//        return camera;
+//    }
 
     public static String[] NECESSARY_PERMISSIONS_START_APP = {
             Manifest.permission.CAMERA,

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.loony.timelapsemaker">
+    package="pl.kflorczyk.timelapsemaker">
 
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:persistent="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
-        <activity android:name=".NewActivity"
+        <activity android:name="pl.kflorczyk.timelapsemaker.NewActivity"
             android:screenOrientation="sensorLandscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -28,10 +28,6 @@
             </intent-filter>
         </activity>
 
-        <service
-            android:name=".camera.CameraService" />
-        <service android:name=".http_server.HttpService"
-            />
 
         <!--<activity android:name=".NewActivity"></activity>-->
     </application>

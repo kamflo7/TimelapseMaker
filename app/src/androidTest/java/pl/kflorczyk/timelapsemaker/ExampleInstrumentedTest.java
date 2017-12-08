@@ -1,4 +1,4 @@
-package com.loony.timelapsemaker;
+package pl.kflorczyk.timelapsemaker;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
