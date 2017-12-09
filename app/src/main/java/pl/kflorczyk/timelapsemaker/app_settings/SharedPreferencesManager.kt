@@ -1,8 +1,8 @@
-package pl.kflorczyk.timelapsemaker.services
+package pl.kflorczyk.timelapsemaker.app_settings
 
 import android.content.Context
 import android.content.SharedPreferences
-import pl.kflorczyk.timelapsemaker.models.CameraVersionAPI
+import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.validators.PasswordValidator
 
 /**
@@ -20,7 +20,17 @@ class SharedPreferencesManager(context:Context) {
     private val context:Context = context
     private val sharedPref:SharedPreferences = context.getSharedPreferences(FILE_KEY, Context.MODE_PRIVATE)
 
-    fun getCameraVersionAPI(): CameraVersionAPI = if (sharedPref.getInt(KEY_CAMERA_API, CameraVersionAPI.V_1.primitiveValue) == CameraVersionAPI.V_1.primitiveValue) CameraVersionAPI.V_1 else CameraVersionAPI.V_2
+    fun getCameraVersionAPI(): CameraVersionAPI? {
+        val value:Int = sharedPref.getInt(KEY_CAMERA_API, -1)
+
+        var cameraVersion: CameraVersionAPI? = null
+        when (value) {
+            -1 -> cameraVersion = null
+            1 -> cameraVersion = CameraVersionAPI.V_1
+            2 -> cameraVersion = CameraVersionAPI.V_2
+        }
+        return cameraVersion
+    }
 
     fun setCameraVersionAPI(version: CameraVersionAPI) {
         throw NotImplementedError("Not implemented method yet")

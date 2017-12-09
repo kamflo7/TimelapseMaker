@@ -1,16 +1,16 @@
-package pl.kflorczyk.timelapsemaker.services
+package pl.kflorczyk.timelapsemaker.app_settings
 
 import android.content.Context
-import pl.kflorczyk.timelapsemaker.models.CameraVersionAPI
+import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 
 /**
  * Created by Kamil on 2017-12-08.
  */
 class UserSettings(context: Context) {
-    private val context: Context = context;
+    private val context: Context = context
     private val prefsManager: SharedPreferencesManager = SharedPreferencesManager(context)
 
-    fun getCameraVersionAPI(): CameraVersionAPI = prefsManager.getCameraVersionAPI()
+    fun getCameraVersionAPI(): CameraVersionAPI? = prefsManager.getCameraVersionAPI()
 
     fun setCameraVersionAPI(version: CameraVersionAPI) = prefsManager.setCameraVersionAPI(version)
 
