@@ -3,7 +3,9 @@ package pl.kflorczyk.timelapsemaker.app_settings
 import android.content.Context
 import android.content.SharedPreferences
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
+import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.validators.PasswordValidator
+import java.util.regex.Pattern
 
 /**
  * Created by Kamil on 2017-12-08.
@@ -16,9 +18,56 @@ class SharedPreferencesManager(context:Context) {
     private val KEY_WEB_PASSWORD_ADMIN = "$PACKAGE.settingsFile.webpasswordadmin"
     private val KEY_WEB_ENABLED = "$PACKAGE.settingsFile.webenabled"
     private val KEY_CAMERA_API = "$PACKAGE.settingsFile.cameraapi"
+    private val KEY_CAMERA_PHOTOSMAX = "$PACKAGE.settingsFile.cameraapi.photosmax"
+    private val KEY_CAMERA_RESOLUTION = "$PACKAGE.settingsFile.cameraapi.resolution"
+    private val KEY_CAMERA_FREQUENCY = "$PACKAGE.settingsFile.cameraapi.frequency"
+    private val KEY_CAMERA_ACTIVEID = "$PACKAGE.settingsFile.cameraapi.activeid"
 
     private val context:Context = context
     private val sharedPref:SharedPreferences = context.getSharedPreferences(FILE_KEY, Context.MODE_PRIVATE)
+
+    fun getActiveCamera(): String? {
+        val cameraID = sharedPref.getString(KEY_CAMERA_ACTIVEID, "null")
+        return if (cameraID.equals("null")) null else cameraID
+    }
+
+    fun setActiveCamera(id: String) = sharedPref.edit().putString(KEY_CAMERA_ACTIVEID, id).apply()
+
+    fun getFrequencyCapturing():Long? {
+        val frequency: Long = sharedPref.getLong(KEY_CAMERA_FREQUENCY, -1)
+        return if (frequency == -1L) null else frequency
+    }
+
+    fun setFrequencyCapturing(frequency: Long) = sharedPref.edit().putLong(KEY_CAMERA_FREQUENCY, frequency).apply()
+
+    fun getResolution(): Resolution? {
+        val resolutionStr: String = sharedPref.getString(KEY_CAMERA_RESOLUTION, "null")
+        if(resolutionStr.equals("null")) {
+            return null
+        }
+
+        val parts: List<String> = resolutionStr.split(Pattern.quote("x"))
+        if(parts.size == 2) {
+            return Resolution(
+                Integer.parseInt(parts[0]),
+                Integer.parseInt(parts[1]))
+        }
+
+        return null
+    }
+
+    fun setResolution(resolution: Resolution) {
+        sharedPref.edit().putString(KEY_CAMERA_RESOLUTION, "${resolution.width}x${resolution.height}").apply()
+    }
+
+    fun getPhotosMax():Int? {
+        val amount:Int = sharedPref.getInt(KEY_CAMERA_PHOTOSMAX, -1)
+        return if (amount != -1) amount else null
+    }
+
+    fun setPhotosMax(amount:Int) {
+        sharedPref.edit().putInt(KEY_CAMERA_PHOTOSMAX, amount).apply()
+    }
 
     fun getCameraVersionAPI(): CameraVersionAPI? {
         val value:Int = sharedPref.getInt(KEY_CAMERA_API, -1)

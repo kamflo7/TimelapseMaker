@@ -29,6 +29,7 @@
         </activity>
 
 
+        <service android:name=".timelapse.TimelapseService"></service>
         <!--<activity android:namMainActivityvity"></activity>-->
     </application>
 
