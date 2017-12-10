@@ -1,18 +1,25 @@
 package pl.kflorczyk.timelapsemaker
 
+import android.Manifest
 import android.hardware.Camera
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
+import android.support.v4.app.ActivityCompat
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.RelativeLayout
+import io.reactivex.functions.Consumer
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import pl.kflorczyk.timelapsemaker.timelapse.*
+import android.widget.Toast
+import android.content.pm.PackageManager
+
+
 
 class MainActivity : AppCompatActivity() {
 
@@ -80,6 +87,36 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
+    private val REQUEST_PERMISSIONS_PREVIEW = 1
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        if (requestCode === REQUEST_PERMISSIONS_PREVIEW) {
+            if (grantResults.isNotEmpty()) {
+                for (grantResult in grantResults) {
+                    if (grantResult != PackageManager.PERMISSION_GRANTED) {
+                        Toast.makeText(this, "You have to provide permissions to use app.", Toast.LENGTH_LONG).show()
+                        return
+                    }
+                }
+
+                startPreviewReally()
+            }
+        }
+    }
+
+    private var surfaceHolder:SurfaceHolder? = null
+
+    private fun startPreviewReally() {
+        val settings: TimelapseSettings = Util.getTimelapseSettingsFromFile(this@MainActivity)
+        val strategy = if (settings.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
+        val timelapseController = TimelapseController(strategy)
+
+        try {
+            timelapseController.startPreviewing(settings, surfaceHolder!!)
+        } catch(e: CameraNotAvailableException) {
+            Util.log("camera not available exception")
+        }
+    }
+
     private fun startPreview() {
         if(surfaceContainer.childCount > 0) {
             surfaceContainer.removeView(surfaceCamera)
@@ -99,15 +136,12 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
 
-                val settings: TimelapseSettings = Util.getTimelapseSettingsFromFile(this@MainActivity)
+                this@MainActivity.surfaceHolder = surfaceHolder
 
-                val strategy = if (settings.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
-                val timelapseController = TimelapseController(strategy)
-
-                try {
-                    timelapseController.startPreviewing(settings, surfaceHolder!!)
-                } catch(e: CameraNotAvailableException) {
-                    Util.log("camera not available exception")
+                if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this@MainActivity)) {
+                    ActivityCompat.requestPermissions(this@MainActivity, Util.NECESSARY_PERMISSIONS_START_APP, REQUEST_PERMISSIONS_PREVIEW)
+                } else {
+                    startPreviewReally()
                 }
             }
 

@@ -29,6 +29,13 @@ import java.util.Collections
  */
 
 object Util {
+    val NECESSARY_PERMISSIONS_START_APP = arrayOf(
+            Manifest.permission.CAMERA,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.ACCESS_WIFI_STATE,
+            Manifest.permission.INTERNET,
+            Manifest.permission.WAKE_LOCK)
 
     fun getTimelapseSettingsFromFile(context:Context):TimelapseSettings {
         var prefsManager = SharedPreferencesManager(context)
@@ -53,8 +60,6 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
 
         return settings
     }
-
-//    var NECESSARY_PERMISSIONS_START_APP = arrayOf(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.ACCESS_WIFI_STATE, Manifest.permission.INTERNET, Manifest.permission.WAKE_LOCK)
 
     fun getApplicationVersion(context: Context): String {
         var version = ""
