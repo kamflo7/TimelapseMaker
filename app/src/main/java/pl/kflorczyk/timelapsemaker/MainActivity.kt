@@ -1,24 +1,20 @@
 package pl.kflorczyk.timelapsemaker
 
 import android.Manifest
-import android.hardware.Camera
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
-import android.support.v4.app.ActivityCompat
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.RelativeLayout
-import io.reactivex.functions.Consumer
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import pl.kflorczyk.timelapsemaker.timelapse.*
 import android.widget.Toast
-import android.content.pm.PackageManager
-
+import com.tbruyelle.rxpermissions2.RxPermissions
 
 
 class MainActivity : AppCompatActivity() {
@@ -28,6 +24,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var fabSettings: FloatingActionButton
 
     private var surfaceCamera: SurfaceView? = null
+
+    private var timelapseControllerPreview: TimelapseController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,29 +48,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-
-        if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
-
-        } else {
-//            val numberOfCameras = Camera.getNumberOfCameras()
-//
-//            Util.log("Number of cameras $numberOfCameras")
-//
-//            for(i in 0..numberOfCameras) {
-//                var index = i
-//                Util.log("current loop $i")
-//
-//                try {
-//                    var cam: Camera.CameraInfo = Camera.CameraInfo()
-//                    Camera.getCameraInfo(i, cam)
-//                    Util.log(if (cam.facing == Camera.CameraInfo.CAMERA_FACING_BACK) "kamera tylnia" else "kamera przednia")
-//                } catch (e: RuntimeException) {
-//                    Util.log("Camera ex: ${e.message}")
-//                }
-//            }
-
-            startPreview()
-        }
     }
 
     override fun onStop() {
@@ -81,41 +56,23 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
+
+        } else {
+            startPreview()
+        }
     }
 
     override fun onPause() {
         super.onPause()
-    }
 
-    private val REQUEST_PERMISSIONS_PREVIEW = 1
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        if (requestCode === REQUEST_PERMISSIONS_PREVIEW) {
-            if (grantResults.isNotEmpty()) {
-                for (grantResult in grantResults) {
-                    if (grantResult != PackageManager.PERMISSION_GRANTED) {
-                        Toast.makeText(this, "You have to provide permissions to use app.", Toast.LENGTH_LONG).show()
-                        return
-                    }
-                }
-
-                startPreviewReally()
-            }
+        if(timelapseControllerPreview?.isPreviewing() == true) {
+            timelapseControllerPreview!!.stopPreview()
+            timelapseControllerPreview = null
         }
     }
 
-    private var surfaceHolder:SurfaceHolder? = null
-
-    private fun startPreviewReally() {
-        val settings: TimelapseSettings = Util.getTimelapseSettingsFromFile(this@MainActivity)
-        val strategy = if (settings.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
-        val timelapseController = TimelapseController(strategy)
-
-        try {
-            timelapseController.startPreviewing(settings, surfaceHolder!!)
-        } catch(e: CameraNotAvailableException) {
-            Util.log("camera not available exception")
-        }
-    }
 
     private fun startPreview() {
         if(surfaceContainer.childCount > 0) {
@@ -136,13 +93,25 @@ class MainActivity : AppCompatActivity() {
                     return
                 }
 
-                this@MainActivity.surfaceHolder = surfaceHolder
+                RxPermissions(this@MainActivity)
+                    .request(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    .subscribe({ granted ->
+                        if(granted) {
+                            val settings: TimelapseSettings = Util.getTimelapseSettingsFromFile(this@MainActivity)
+                            val strategy = if (settings.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
+                            timelapseControllerPreview = TimelapseController(strategy)
 
-                if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this@MainActivity)) {
-                    ActivityCompat.requestPermissions(this@MainActivity, Util.NECESSARY_PERMISSIONS_START_APP, REQUEST_PERMISSIONS_PREVIEW)
-                } else {
-                    startPreviewReally()
-                }
+                            try {
+                                timelapseControllerPreview!!.startPreviewing(settings, surfaceHolder!!)
+                            } catch(e: CameraNotAvailableException) {
+                                Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
+                                Util.log("camera not available exception")
+                            }
+                        } else {
+                            Toast.makeText(this@MainActivity, "You have to grant permissions to use app", Toast.LENGTH_LONG).show()
+                        }
+                     })
+
             }
 
         })

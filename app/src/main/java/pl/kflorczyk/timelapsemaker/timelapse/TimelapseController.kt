@@ -10,6 +10,8 @@ class TimelapseController(strategy: TimelapseControllerStrategy) {
 
     private val timelapseControllerStrategy: TimelapseControllerStrategy = strategy
 
+    private var isPreviewStarted: Boolean = false
+
     fun startTimelapse() {
         timelapseControllerStrategy.startTimelapse()
     }
@@ -20,5 +22,13 @@ class TimelapseController(strategy: TimelapseControllerStrategy) {
         } catch(e: CameraNotAvailableException) {
             throw e
         }
+
+        isPreviewStarted = true
+    }
+
+    fun isPreviewing():Boolean = isPreviewStarted
+
+    fun stopPreview() {
+        timelapseControllerStrategy.stopPreview()
     }
 }

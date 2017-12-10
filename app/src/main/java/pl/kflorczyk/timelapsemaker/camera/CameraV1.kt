@@ -9,6 +9,8 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
  */
 class CameraV1 {
 
+    private var camera: Camera? = null
+
     fun prepare() {
 
     }
@@ -18,10 +20,16 @@ class CameraV1 {
     }
 
     fun openForPreview(surfaceHolder: SurfaceHolder) {
-        val camera: Camera = getCameraInstance() ?: throw CameraNotAvailableException("")
+        camera = getCameraInstance() ?: throw CameraNotAvailableException("")
 
-        camera.setPreviewDisplay(surfaceHolder)
-        camera.startPreview()
+        camera!!.setPreviewDisplay(surfaceHolder)
+        camera!!.startPreview()
+    }
+
+    fun stop() {
+        camera?.stopPreview()
+        camera?.release()
+        camera = null
     }
 
     fun getResolutions(): List<Resolution> {

@@ -8,4 +8,6 @@ import android.view.SurfaceHolder
 interface TimelapseControllerStrategy {
     fun startPreview(timelapseSettings: TimelapseSettings, surfaceHolder: SurfaceHolder)
     fun startTimelapse()
+
+    fun stopPreview()
 }
