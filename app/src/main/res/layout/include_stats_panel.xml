@@ -10,7 +10,7 @@
     android:layout_alignParentBottom="true"
     android:layout_centerHorizontal="true"
     android:background="#33000000"
-    tools:showIn="@layout/activity_new"
+    tools:showIn="@layout/activity_main"
     >
     <LinearLayout
         android:layout_width="wrap_content"
@@ -21,8 +21,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="@dimen/stats_panel_header_image_size"
+                android:layout_height="@dimen/stats_panel_header_image_size"
                 android:scaleType="fitXY"
                 android:adjustViewBounds="true"
                 android:src="@drawable/ic_remote"
@@ -34,7 +34,7 @@
                 android:id="@+id/webAccessTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="14dp"
+                android:textSize="@dimen/stats_panel_header_textSize"
                 android:layout_marginLeft="2dp"
                 android:text="WebAccess:"/>
         </RelativeLayout>
@@ -45,6 +45,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enabled"
+            android:textSize="@dimen/stats_panel_content_textSize"
             android:layout_gravity="center_horizontal"
             />
     </LinearLayout>
@@ -60,8 +61,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="@dimen/stats_panel_header_image_size"
+                android:layout_height="@dimen/stats_panel_header_image_size"
                 android:scaleType="fitXY"
                 android:adjustViewBounds="true"
                 android:src="@drawable/ic_photo_size_select"
@@ -69,7 +70,7 @@
                 />
             <TextView
                 android:textColor="#ffffff"
-                android:textSize="14dp"
+                android:textSize="@dimen/stats_panel_header_textSize"
                 android:id="@+id/resolutionTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -84,6 +85,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="1920x1080"
+            android:textSize="@dimen/stats_panel_content_textSize"
             android:layout_gravity="center_horizontal"
             />
     </LinearLayout>
@@ -99,8 +101,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="@dimen/stats_panel_header_image_size"
+                android:layout_height="@dimen/stats_panel_header_image_size"
                 android:scaleType="fitXY"
                 android:adjustViewBounds="true"
                 android:src="@drawable/ic_interval"
@@ -108,7 +110,7 @@
                 />
             <TextView
                 android:textColor="#ffffff"
-                android:textSize="14dp"
+                android:textSize="@dimen/stats_panel_header_textSize"
                 android:id="@+id/intervalTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -123,6 +125,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="3s"
+            android:textSize="@dimen/stats_panel_content_textSize"
             android:layout_gravity="center_horizontal"
             />
     </LinearLayout>
@@ -138,8 +141,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="@dimen/stats_panel_header_image_size"
+                android:layout_height="@dimen/stats_panel_header_image_size"
                 android:scaleType="fitXY"
                 android:adjustViewBounds="true"
                 android:src="@drawable/ic_amount"
@@ -147,7 +150,7 @@
                 />
             <TextView
                 android:textColor="#ffffff"
-                android:textSize="14dp"
+                android:textSize="@dimen/stats_panel_header_textSize"
                 android:id="@+id/photosCapturedTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -162,6 +165,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="7/500"
+            android:textSize="@dimen/stats_panel_content_textSize"
             android:layout_gravity="center_horizontal"
             />
     </LinearLayout>
@@ -177,8 +181,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="@dimen/stats_panel_header_image_size"
+                android:layout_height="@dimen/stats_panel_header_image_size"
                 android:scaleType="fitXY"
                 android:adjustViewBounds="true"
                 android:src="@drawable/ic_interval"
@@ -186,7 +190,7 @@
                 />
             <TextView
                 android:textColor="#ffffff"
-                android:textSize="14dp"
+                android:textSize="@dimen/stats_panel_header_textSize"
                 android:id="@+id/nextCaptureTxt"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -201,13 +205,8 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="12s"
+            android:textSize="@dimen/stats_panel_content_textSize"
             android:layout_gravity="center_horizontal"
             />
     </LinearLayout>
-    <!--<TextView
-        android:textColor="#ffffff"
-        android:id="@+id/nextCaptureTxt"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Next capture:\n"/>-->
 </LinearLayout>

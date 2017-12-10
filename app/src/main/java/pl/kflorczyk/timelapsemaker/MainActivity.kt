@@ -1,6 +1,7 @@
 package pl.kflorczyk.timelapsemaker
 
 import android.Manifest
+import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
@@ -46,12 +47,20 @@ class MainActivity : AppCompatActivity() {
 
     }
 
+    fun btnSettingClick(view: View) {
+
+    }
+
     override fun onStart() {
         super.onStart()
     }
 
     override fun onStop() {
         super.onStop()
+
+        if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
+            stopService(Intent(this, TimelapseService::class.java))
+        }
     }
 
     override fun onResume() {
@@ -60,7 +69,10 @@ class MainActivity : AppCompatActivity() {
         if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
 
         } else {
-            startPreview()
+            var intent = Intent(this, TimelapseService::class.java)
+            startService(intent)
+            Util.log("Start service")
+//            startPreview()
         }
     }
 

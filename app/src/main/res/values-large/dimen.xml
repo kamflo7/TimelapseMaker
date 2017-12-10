@@ -9,4 +9,8 @@
     <dimen name="dialog_item_layoutPadding">2dp</dimen>
     <dimen name="dialog_item_labelTop_textSize">23dp</dimen>
     <dimen name="dialog_item_labelBottom_textSize">19dp</dimen>
+
+    <dimen name="stats_panel_header_textSize">10dp</dimen>
+    <dimen name="stats_panel_header_image_size">14dp</dimen>
+    <dimen name="stats_panel_content_textSize">10dp</dimen>
 </resources>
