@@ -1,7 +1,7 @@
 package pl.kflorczyk.timelapsemaker.timelapse
 
+import android.content.Context
 import android.view.SurfaceHolder
-import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.camera.CameraV1
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 
@@ -10,7 +10,7 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
  */
 class TimelapseControllerV1Strategy : TimelapseControllerStrategy {
     private var camera: CameraV1? = null
-    private var onTimelapseStateChangeListener: OnTimelapseStateChangeListener? = null
+    private lateinit var listener: OnTimelapseStateChangeListener
 
     override fun startPreview(timelapseSettings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
         camera = CameraV1()
@@ -27,7 +27,26 @@ class TimelapseControllerV1Strategy : TimelapseControllerStrategy {
         camera?.stop()
     }
 
-    override fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener) {
-        this.onTimelapseStateChangeListener = onTimelapseStateChangeListener
+    override fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener, context: Context) {
+        this.listener = onTimelapseStateChangeListener
+
+        try {
+            camera = CameraV1()
+            camera!!.openForTimelapse(context)
+
+            this.listener.onInit()
+        } catch(e: CameraNotAvailableException) {
+            this.listener.onFail("Camera not available")
+        }
     }
+
+    override fun capturePhoto() {
+        camera!!.capturePhoto(object : CameraV1.CameraStateChangeListener {
+            override fun onCapture(bytes: ByteArray?) {
+                this@TimelapseControllerV1Strategy.listener.onCapture(bytes)
+            }
+
+        })
+    }
+
 }

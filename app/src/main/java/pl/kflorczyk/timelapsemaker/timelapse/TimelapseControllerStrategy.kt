@@ -1,5 +1,6 @@
 package pl.kflorczyk.timelapsemaker.timelapse
 
+import android.content.Context
 import android.view.SurfaceHolder
 
 /**
@@ -7,7 +8,8 @@ import android.view.SurfaceHolder
  */
 interface TimelapseControllerStrategy {
     fun startPreview(timelapseSettings: TimelapseSettings, surfaceHolder: SurfaceHolder)
-    fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener)
-
     fun stopPreview()
+
+    fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener, context: Context)
+    fun capturePhoto()
 }

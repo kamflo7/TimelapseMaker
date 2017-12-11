@@ -19,16 +19,34 @@ class TimelapseService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         var runnable = Runnable {
-            for(i in 0..100) {
-                synchronized(this@TimelapseService) {
-                    if(haveToStopSignal) {
-                        return@Runnable
-                    }
+
+//            synchronized(this@TimelapseService) {
+//                if(haveToStopSignal) {
+//                    return@Runnable
+//                }
+//            }
+
+            var listener = object : OnTimelapseStateChangeListener {
+                override fun onInit() {
+                    Util.log("[Service] got onInit")
+                    TimelapseController.capturePhoto()
                 }
 
-                Util.log("Thread counter $i")
-                Thread.sleep(1000)
+                override fun onCapture(bytes: ByteArray?) {
+                    Util.log("[Service] Got photo")
+                }
+
+                override fun onFail(msg: String) {
+                    Util.log("[Service] Got onFail")
+                }
             }
+
+            try {
+                TimelapseController.startTimelapse(listener, this@TimelapseService.applicationContext)
+            } catch(e: RuntimeException) {
+                Util.log("[TimelapseService] TimelapseController.startTimelapse caught exception ${e.message}");
+            }
+
         }
 
         var worker = WorkerThread("ServiceThread")

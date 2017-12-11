@@ -48,8 +48,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun btnStartTimelapseClick(view: View) {
-        if(TimelapseController.getState() == TimelapseController.State.NOTHING) {
+        if(!Util.isMyServiceRunning(TimelapseService::class.java, this)) {
+            if(TimelapseController.getState() == TimelapseController.State.PREVIEW) {
+                TimelapseController.stopPreview()
+            }
 
+            startService(Intent(this, TimelapseService::class.java))
         }
     }
 

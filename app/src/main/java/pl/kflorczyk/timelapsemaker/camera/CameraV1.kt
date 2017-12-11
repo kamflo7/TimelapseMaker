@@ -1,8 +1,12 @@
 package pl.kflorczyk.timelapsemaker.camera
 
+import android.content.Context
+import android.graphics.SurfaceTexture
 import android.hardware.Camera
 import android.view.SurfaceHolder
+import pl.kflorczyk.timelapsemaker.MyApplication
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
+import java.io.IOException
 
 /**
  * Created by Kamil on 2017-12-09.
@@ -10,20 +14,39 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 class CameraV1 {
 
     private var camera: Camera? = null
-
-    fun prepare() {
-
-    }
-
-    fun capturePhoto() {
-
-    }
+    private lateinit var dummySurface: SurfaceTexture
 
     fun openForPreview(surfaceHolder: SurfaceHolder) {
         camera = getCameraInstance() ?: throw CameraNotAvailableException("")
 
         camera!!.setPreviewDisplay(surfaceHolder)
         camera!!.startPreview()
+    }
+
+    fun openForTimelapse(context: Context) {
+        camera = getCameraInstance() ?: throw CameraNotAvailableException("")
+
+        try {
+            dummySurface = SurfaceTexture(10)
+            camera!!.setPreviewTexture(dummySurface)
+
+            val timelapseSettings = (context.applicationContext as MyApplication).timelapseSettings
+            val params = camera!!.parameters
+            params.setPictureSize(timelapseSettings!!.resolution!!.width, timelapseSettings!!.resolution!!.height)
+
+            camera!!.parameters = params
+        } catch(e: IOException) {
+            throw CameraNotAvailableException(e.message ?: "IOException")
+        }
+    }
+
+    fun capturePhoto(listener: CameraStateChangeListener) {
+        camera!!.startPreview()
+        camera!!.takePicture(null, null, object : Camera.PictureCallback {
+            override fun onPictureTaken(bytes: ByteArray?, camera: Camera?) {
+                listener.onCapture(bytes)
+            }
+        })
     }
 
     fun stop() {
@@ -62,5 +85,9 @@ class CameraV1 {
         }
 
         return c
+    }
+
+    interface CameraStateChangeListener {
+        fun onCapture(bytes: ByteArray?)
     }
 }

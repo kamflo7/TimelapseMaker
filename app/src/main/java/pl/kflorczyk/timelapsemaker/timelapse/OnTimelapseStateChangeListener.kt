@@ -5,6 +5,6 @@ package pl.kflorczyk.timelapsemaker.timelapse
  */
 interface OnTimelapseStateChangeListener {
     fun onInit()
-    fun onProgress()
-    fun onFail()
+    fun onCapture(bytes: ByteArray?)
+    fun onFail(msg: String)
 }
