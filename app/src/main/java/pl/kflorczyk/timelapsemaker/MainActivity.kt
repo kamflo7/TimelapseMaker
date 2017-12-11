@@ -81,7 +81,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
 
-        if(!TimelapseController.isPreviewing()) {
+        if(TimelapseController.getState() == TimelapseController.State.PREVIEW) {
             TimelapseController.stopPreview()
         }
     }
@@ -110,8 +110,8 @@ class MainActivity : AppCompatActivity() {
                     .request(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     .subscribe({ granted ->
                         if(granted) {
-                            val strategy = if (app.timelapseSettings!!.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
-                            TimelapseController.setStrategy(strategy)
+                            val strategy = if (app.timelapseSettings!!.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV1Strategy() //TODO: temporary
+                            TimelapseController.build(strategy, app.timelapseSettings!!)
 
                             try {
                                 TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)

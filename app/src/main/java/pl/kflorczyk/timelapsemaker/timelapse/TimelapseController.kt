@@ -8,38 +8,43 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
  */
 object TimelapseController {
 
-    private var timelapseControllerStrategy: TimelapseControllerStrategy? = null
+    private var strategy: TimelapseControllerStrategy? = null
+    private var settings: TimelapseSettings? = null
 
-    private var isPreviewing: Boolean = false
+    private var state:State = State.NOTHING
 
-    fun getStrategy(): TimelapseControllerStrategy? = timelapseControllerStrategy
-
-    fun setStrategy(strategy: TimelapseControllerStrategy) {
-        timelapseControllerStrategy = strategy
+    fun build(strategy: TimelapseControllerStrategy, settings: TimelapseSettings) {
+        this.strategy = strategy
+        this.settings = settings
     }
 
-
     fun startTimelapse() {
-        if(timelapseControllerStrategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
+        if(strategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
 
-        timelapseControllerStrategy?.startTimelapse()
+//        strategy?.startTimelapse()
     }
 
     fun startPreviewing(settings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
-        if(timelapseControllerStrategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
+        if(strategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
 
         try {
-            timelapseControllerStrategy?.startPreview(settings, surfaceHolder)
+            strategy?.startPreview(settings, surfaceHolder)
         } catch(e: CameraNotAvailableException) {
             throw e
         }
 
-        isPreviewing = true
+        state = State.PREVIEW
     }
 
-    fun isPreviewing():Boolean = isPreviewing
+    fun getState():State = state
 
     fun stopPreview() {
-        timelapseControllerStrategy?.stopPreview()
+        strategy?.stopPreview()
+    }
+
+    enum class State {
+        NOTHING,
+        PREVIEW,
+        TIMELAPSE
     }
 }

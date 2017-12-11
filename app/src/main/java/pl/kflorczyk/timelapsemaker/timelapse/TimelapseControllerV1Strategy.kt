@@ -10,26 +10,24 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
  */
 class TimelapseControllerV1Strategy : TimelapseControllerStrategy {
     private var camera: CameraV1? = null
+    private var onTimelapseStateChangeListener: OnTimelapseStateChangeListener? = null
 
     override fun startPreview(timelapseSettings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
         camera = CameraV1()
-
         surfaceHolder.setFixedSize(timelapseSettings.resolution!!.width, timelapseSettings.resolution!!.height)
 
         try {
             camera!!.openForPreview(surfaceHolder)
         } catch(e: CameraNotAvailableException) {
-            Util.log("TimelapseControllerV1Strategy>startPreview>CameraNotAvailableException")
             throw e
         }
-
     }
 
     override fun stopPreview() {
         camera?.stop()
     }
 
-    override fun startTimelapse() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener) {
+        this.onTimelapseStateChangeListener = onTimelapseStateChangeListener
     }
 }
