@@ -27,7 +27,6 @@ class MainActivity : AppCompatActivity() {
     private var surfaceCamera: SurfaceView? = null
 
     private lateinit var app:MyApplication
-    private var timelapseControllerPreview: TimelapseController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -82,9 +81,8 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
 
-        if(timelapseControllerPreview?.isPreviewing() == true) {
-            timelapseControllerPreview!!.stopPreview()
-            timelapseControllerPreview = null
+        if(!TimelapseController.isPreviewing()) {
+            TimelapseController.stopPreview()
         }
     }
 
@@ -113,10 +111,10 @@ class MainActivity : AppCompatActivity() {
                     .subscribe({ granted ->
                         if(granted) {
                             val strategy = if (app.timelapseSettings!!.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
-                            timelapseControllerPreview = TimelapseController(strategy)
+                            TimelapseController.setStrategy(strategy)
 
                             try {
-                                timelapseControllerPreview!!.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)
+                                TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)
                             } catch(e: CameraNotAvailableException) {
                                 Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
                                 Util.log("camera not available exception")

@@ -6,29 +6,40 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 /**
  * Created by Kamil on 2017-12-09.
  */
-class TimelapseController(strategy: TimelapseControllerStrategy) {
+object TimelapseController {
 
-    private val timelapseControllerStrategy: TimelapseControllerStrategy = strategy
+    private var timelapseControllerStrategy: TimelapseControllerStrategy? = null
 
-    private var isPreviewStarted: Boolean = false
+    private var isPreviewing: Boolean = false
+
+    fun getStrategy(): TimelapseControllerStrategy? = timelapseControllerStrategy
+
+    fun setStrategy(strategy: TimelapseControllerStrategy) {
+        timelapseControllerStrategy = strategy
+    }
+
 
     fun startTimelapse() {
-        timelapseControllerStrategy.startTimelapse()
+        if(timelapseControllerStrategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
+
+        timelapseControllerStrategy?.startTimelapse()
     }
 
     fun startPreviewing(settings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
+        if(timelapseControllerStrategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
+
         try {
-            timelapseControllerStrategy.startPreview(settings, surfaceHolder)
+            timelapseControllerStrategy?.startPreview(settings, surfaceHolder)
         } catch(e: CameraNotAvailableException) {
             throw e
         }
 
-        isPreviewStarted = true
+        isPreviewing = true
     }
 
-    fun isPreviewing():Boolean = isPreviewStarted
+    fun isPreviewing():Boolean = isPreviewing
 
     fun stopPreview() {
-        timelapseControllerStrategy.stopPreview()
+        timelapseControllerStrategy?.stopPreview()
     }
 }
