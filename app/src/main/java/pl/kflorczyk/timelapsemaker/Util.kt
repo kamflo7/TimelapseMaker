@@ -18,6 +18,8 @@ import pl.kflorczyk.timelapsemaker.camera.CameraHelper
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.camera.LensFacing
 import pl.kflorczyk.timelapsemaker.camera.PictureFormat
+import pl.kflorczyk.timelapsemaker.timelapse.TimelapseControllerStrategy
+import pl.kflorczyk.timelapsemaker.timelapse.TimelapseControllerV1Strategy
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
 
 import java.net.InetAddress
@@ -59,6 +61,10 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
         }
 
         return settings
+    }
+
+    fun getTimelapseControllerStrategy(context: Context): TimelapseControllerStrategy {
+        return if ((context.applicationContext as MyApplication).timelapseSettings!!.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV1Strategy() // todo: temporary
     }
 
     fun getApplicationVersion(context: Context): String {

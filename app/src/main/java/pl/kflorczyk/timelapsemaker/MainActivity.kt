@@ -11,7 +11,6 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.RelativeLayout
-import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import pl.kflorczyk.timelapsemaker.timelapse.*
 import android.widget.Toast
@@ -49,7 +48,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun btnStartTimelapseClick(view: View) {
+        if(TimelapseController.getState() == TimelapseController.State.NOTHING) {
 
+        }
     }
 
     fun btnSettingClick(view: View) {
@@ -110,7 +111,7 @@ class MainActivity : AppCompatActivity() {
                     .request(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     .subscribe({ granted ->
                         if(granted) {
-                            val strategy = if (app.timelapseSettings!!.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV1Strategy() //TODO: temporary
+                            val strategy = Util.getTimelapseControllerStrategy(this@MainActivity)
                             TimelapseController.build(strategy, app.timelapseSettings!!)
 
                             try {
