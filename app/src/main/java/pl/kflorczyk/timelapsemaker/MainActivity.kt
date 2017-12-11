@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
     private var surfaceCamera: SurfaceView? = null
 
+    private lateinit var app:MyApplication
     private var timelapseControllerPreview: TimelapseController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -37,6 +38,11 @@ class MainActivity : AppCompatActivity() {
         fabSettings = findViewById(R.id.fab) as FloatingActionButton
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        app = application as MyApplication
+        if(app.timelapseSettings == null) {
+            app.timelapseSettings = Util.getTimelapseSettingsFromFile(this)
+        }
     }
 
     override fun onDestroy() {
@@ -69,10 +75,7 @@ class MainActivity : AppCompatActivity() {
         if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
 
         } else {
-            var intent = Intent(this, TimelapseService::class.java)
-            startService(intent)
-            Util.log("Start service")
-//            startPreview()
+            startPreview()
         }
     }
 
@@ -109,12 +112,11 @@ class MainActivity : AppCompatActivity() {
                     .request(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     .subscribe({ granted ->
                         if(granted) {
-                            val settings: TimelapseSettings = Util.getTimelapseSettingsFromFile(this@MainActivity)
-                            val strategy = if (settings.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
+                            val strategy = if (app.timelapseSettings!!.cameraVersion == CameraVersionAPI.V_1) TimelapseControllerV1Strategy() else TimelapseControllerV2Strategy()
                             timelapseControllerPreview = TimelapseController(strategy)
 
                             try {
-                                timelapseControllerPreview!!.startPreviewing(settings, surfaceHolder!!)
+                                timelapseControllerPreview!!.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)
                             } catch(e: CameraNotAvailableException) {
                                 Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
                                 Util.log("camera not available exception")

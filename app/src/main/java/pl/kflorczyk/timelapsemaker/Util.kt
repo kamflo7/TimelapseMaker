@@ -41,7 +41,7 @@ object Util {
         var prefsManager = SharedPreferencesManager(context)
 
         var settings = TimelapseSettings(
-            prefsManager.getPhotosMax(),
+            prefsManager.getPhotosMax() ?: 500,
             prefsManager.getFrequencyCapturing() ?: 3000,
             prefsManager.getResolution(),
             PictureFormat.JPEG,

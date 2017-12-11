@@ -7,7 +7,7 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 /**
  * Created by Kamil on 2017-12-10.
  */
-data class TimelapseSettings(var photosMax:Int?,
+data class TimelapseSettings(var photosMax:Int,
                              var frequencyCapturing: Long,
                              var resolution: Resolution?,
                              var pictureFormat: PictureFormat,
