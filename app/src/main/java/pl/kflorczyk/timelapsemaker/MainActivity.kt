@@ -1,6 +1,5 @@
 package pl.kflorczyk.timelapsemaker
 
-import android.Manifest
 import android.content.Intent
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
@@ -15,7 +14,6 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import pl.kflorczyk.timelapsemaker.timelapse.*
 import android.widget.Toast
 import com.tbruyelle.rxpermissions2.RxPermissions
-
 
 class MainActivity : AppCompatActivity() {
 
@@ -37,9 +35,25 @@ class MainActivity : AppCompatActivity() {
 
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
-        app = application as MyApplication
-        if(app.timelapseSettings == null) {
-            app.timelapseSettings = Util.getTimelapseSettingsFromFile(this)
+        val functionAfterPermissionsDone = fun() {
+            app = application as MyApplication
+            if(app.timelapseSettings == null) {
+                app.timelapseSettings = Util.getTimelapseSettingsFromFile(this)
+            }
+        }
+
+        if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
+            RxPermissions(this@MainActivity)
+                    .request(*Util.NECESSARY_PERMISSIONS_START_APP)
+                    .subscribe({ granted ->
+                        if(granted) {
+                            functionAfterPermissionsDone()
+                        } else {
+                            Toast.makeText(this@MainActivity, "You have to grant permissions to use app", Toast.LENGTH_LONG).show()
+                        }
+                    })
+        } else {
+            functionAfterPermissionsDone()
         }
     }
 
@@ -107,28 +121,22 @@ class MainActivity : AppCompatActivity() {
 
             override fun surfaceCreated(surfaceHolder: SurfaceHolder?) {
                 if(surfaceHolder == null) {
+                    Toast.makeText(this@MainActivity, "Problem with creating the surface for camera preview", Toast.LENGTH_LONG).show()
                     Util.log("MainActivity>startPreview>SurfaceHolder.Callback>surfaceCreated NULL")
                     return
                 }
 
-                RxPermissions(this@MainActivity)
-                    .request(Manifest.permission.CAMERA, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    .subscribe({ granted ->
-                        if(granted) {
-                            val strategy = Util.getTimelapseControllerStrategy(this@MainActivity)
-                            TimelapseController.build(strategy, app.timelapseSettings!!)
+                if(Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this@MainActivity)) {
+                    val strategy = Util.getTimelapseControllerStrategy(this@MainActivity)
+                    TimelapseController.build(strategy, app.timelapseSettings!!)
 
-                            try {
-                                TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)
-                            } catch(e: CameraNotAvailableException) {
-                                Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
-                                Util.log("camera not available exception")
-                            }
-                        } else {
-                            Toast.makeText(this@MainActivity, "You have to grant permissions to use app", Toast.LENGTH_LONG).show()
-                        }
-                     })
-
+                    try {
+                        TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)
+                    } catch(e: CameraNotAvailableException) {
+                        Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
+                        Util.log("camera not available exception")
+                    }
+                }
             }
 
         })
