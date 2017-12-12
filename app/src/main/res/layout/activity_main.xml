@@ -41,7 +41,7 @@
             android:layout_alignParentTop="true"
             android:layout_marginLeft="15dp"
             android:layout_marginTop="15dp"
-            android:onClick="btnSettingClick"
+            android:onClick="btnSettingsClick"
             />
 
         <include layout="@layout/include_stats_panel" />

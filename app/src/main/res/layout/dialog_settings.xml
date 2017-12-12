@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#2f2e30"
+    android:id="@+id/dialog">
+    <LinearLayout
+        android:id="@+id/navigation"
+        android:layout_width="@dimen/dialog_navigation_width"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:layout_alignParentLeft="true"
+        android:padding="@dimen/dialog_navigation_padding"
+        android:background="#ffcb00"
+        >
+        <ImageButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:src="@drawable/ic_settings"
+            android:scaleType="fitXY"
+            android:adjustViewBounds="true"
+
+            />
+
+    </LinearLayout>
+    <View
+        android:background="#ffcb00"
+        android:layout_height="match_parent"
+        android:layout_width="2dp"
+        android:id="@+id/divider"
+        android:layout_toRightOf="@+id/navigation"
+        />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/dialog_topbar_height"
+        android:layout_toRightOf="@+id/divider"
+        android:background="#ffcb00"
+        android:id="@+id/topBar">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/test_multiscreen"
+            android:textSize="@dimen/dialog_topbar_textSize"
+            android:layout_centerVertical="true"
+            android:textColor="#040000"
+            android:layout_marginLeft="5dp"
+            />
+    </RelativeLayout>
+
+    <ListView
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_toRightOf="@+id/divider"
+        android:layout_below="@+id/topBar"
+        android:id="@+id/optionsList"
+        tools:listitem="@layout/item_settings_element"
+        >
+
+    </ListView>
+
+</RelativeLayout>

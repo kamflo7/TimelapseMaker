@@ -10,7 +10,9 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 data class TimelapseSettings(var photosMax:Int,
                              var frequencyCapturing: Long,
                              var resolution: Resolution?,
+                             var availableResolutions: List<Resolution>,
                              var pictureFormat: PictureFormat,
                              var webEnabled: Boolean,
                              var cameraVersion: CameraVersionAPI,
-                             var cameraId: String?)
+                             var cameraId: String?,
+                             var adminPassword: Pair<Boolean, String?>)

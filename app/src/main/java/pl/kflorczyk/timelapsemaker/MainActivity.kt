@@ -14,6 +14,9 @@ import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import pl.kflorczyk.timelapsemaker.timelapse.*
 import android.widget.Toast
 import com.tbruyelle.rxpermissions2.RxPermissions
+import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
+import pl.kflorczyk.timelapsemaker.camera.Resolution
+import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
 
 class MainActivity : AppCompatActivity() {
 
@@ -71,7 +74,31 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun btnSettingClick(view: View) {
+    fun btnSettingsClick(view: View) {
+        if(TimelapseController.getState() == TimelapseController.State.PREVIEW) {
+            TimelapseController.stopPreview()
+        }
+
+        var dialogSettings = DialogSettings(this, fabSettings, object : DialogSettings.OnDialogSettingChangeListener {
+            override fun onChangePhotoResolution(resolution: Resolution) {
+            }
+
+            override fun onChangeInterval(intervalMiliseconds: Int) {
+            }
+
+            override fun onChangePhotosLimit(amount: Int) {
+            }
+
+            override fun onToggleWebServer(toggle: Boolean) {
+            }
+
+            override fun onCameraApiChange(cameraVersion: CameraVersionAPI) {
+            }
+
+            override fun onDialogExit() {
+            }
+        })
+        dialogSettings.show()
 
     }
 

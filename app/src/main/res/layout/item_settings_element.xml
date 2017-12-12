@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="@dimen/dialog_item_layoutHeight"
+    android:padding="@dimen/dialog_item_layoutPadding"
+    >
+    <ImageView
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY"
+        android:adjustViewBounds="true"
+        android:src="@drawable/ic_photo_size_select"
+        android:id="@+id/icon"
+        android:padding="5dp"
+        />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Image resolution"
+        android:textColor="#edeced"
+        android:textSize="@dimen/dialog_item_labelTop_textSize"
+        android:layout_toRightOf="@+id/icon"
+        android:layout_toLeftOf="@+id/switchBtn"
+        android:id="@+id/label"
+        />
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Access your timelapse progress through a website"
+        android:textColor="#a8a7a8"
+        android:textSize="@dimen/dialog_item_labelBottom_textSize"
+        android:layout_toRightOf="@+id/icon"
+        android:layout_toLeftOf="@+id/switchBtn"
+        android:maxLines="1"
+        android:layout_alignParentBottom="true"
+        android:id="@+id/description"
+
+        />
+
+    <android.support.v7.widget.SwitchCompat
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_alignParentRight="true"
+        android:layout_centerVertical="true"
+        android:layout_marginRight="8dp"
+        android:id="@+id/switchBtn"
+        android:visibility="visible"
+        android:focusable="false"
+        />
+</RelativeLayout>

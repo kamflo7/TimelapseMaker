@@ -7,9 +7,6 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.validators.PasswordValidator
 import java.util.regex.Pattern
 
-/**
- * Created by Kamil on 2017-12-08.
- */
 class SharedPreferencesManager(context:Context) {
 
     private val PACKAGE = "pl.kflorczyk.timelapsemaker"
@@ -94,7 +91,7 @@ class SharedPreferencesManager(context:Context) {
 
     fun setWebAdminPassword(password: String): Boolean {
         if(!PasswordValidator().validate(password)) {
-            return false;
+            return false
         }
 
         sharedPref.edit().putString(KEY_WEB_PASSWORD_ADMIN, password).apply()

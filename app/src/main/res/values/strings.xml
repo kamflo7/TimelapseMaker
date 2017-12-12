@@ -5,9 +5,10 @@
     <string name="foreground_capturing">Captured %1$d of %2$d photos</string>
 
     <string name="dialog_choose_resolution">Choose photo resolution</string>
-    <string name="dialog_choose_interval">Choose time interval (seconds)</string>
+    <string name="dialog_choose_interval">Choose time interval (miliseconds)</string>
     <string name="dialog_choose_amount_photos">Limit photos</string>
     <string name="dialog_choose_camera_api">Choose camera api version</string>
+    <string name="dialog_set_password">Set password or leave empty to remove</string>
 
     <!-- DialogSettings descriptions (below TextView) -->
     <string name="dialog_resolution_description">Current resolution is %1$dx%2$d</string>

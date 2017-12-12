@@ -14,10 +14,7 @@ import android.util.Base64
 import android.util.Log
 import android.widget.Toast
 import pl.kflorczyk.timelapsemaker.app_settings.SharedPreferencesManager
-import pl.kflorczyk.timelapsemaker.camera.CameraHelper
-import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
-import pl.kflorczyk.timelapsemaker.camera.LensFacing
-import pl.kflorczyk.timelapsemaker.camera.PictureFormat
+import pl.kflorczyk.timelapsemaker.camera.*
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseControllerStrategy
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseControllerV1Strategy
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
@@ -46,10 +43,12 @@ object Util {
             prefsManager.getPhotosMax() ?: 500,
             prefsManager.getFrequencyCapturing() ?: 3000,
             prefsManager.getResolution(),
+            ArrayList<Resolution>(),
             PictureFormat.JPEG,
             prefsManager.getWebEnabled(),
 prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
-            prefsManager.getActiveCamera()
+            prefsManager.getActiveCamera(),
+            prefsManager.getWebAdminPassword()
         )
 
         if(settings.cameraId == null) {
@@ -57,7 +56,9 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
         }
 
         if(settings.resolution == null && settings.cameraId != null) {
-            settings.resolution = CameraHelper(settings.cameraVersion).getAvailableResolutions(settings.cameraId!!, settings.pictureFormat).maxBy { resolution -> resolution.height }
+            settings.availableResolutions = CameraHelper(settings.cameraVersion).getAvailableResolutions(settings.cameraId!!, settings.pictureFormat)
+
+            settings.resolution = settings.availableResolutions.maxBy { resolution -> resolution.height }
         }
 
         return settings
