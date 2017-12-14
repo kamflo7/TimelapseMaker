@@ -98,7 +98,7 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
         return false
     }
 
-    fun getLocalIpAddress(useIPv4: Boolean): String {
+    fun getLocalIpAddress(useIPv4: Boolean): String? {
         try {
             val interfaces = Collections.list(NetworkInterface.getNetworkInterfaces())
             for (intf in interfaces) {
@@ -124,7 +124,7 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
         } catch (ex: Exception) {
         }
         // for now eat exceptions
-        return ""
+        return null
     }
 
     fun getBatteryLevel(context: Context): Float {

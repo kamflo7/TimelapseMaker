@@ -15,6 +15,13 @@ object TimelapseController {
     private var state:State = State.NOTHING
     private var listenerOutside: OnTimelapseStateChangeListener? = null
 
+    private var capturedPhotos: Int = 0
+
+    fun getCapturedPhotos(): Int = capturedPhotos
+    fun getTimeToNextCapture(): Long {
+        return 500 // todo: implement this
+    }
+
     fun build(strategy: TimelapseControllerStrategy, settings: TimelapseSettings) {
         this.strategy = strategy
         this.settings = settings

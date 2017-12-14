@@ -1,6 +1,7 @@
 package pl.kflorczyk.timelapsemaker
 
 import android.content.Intent
+import android.content.res.Resources
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
@@ -10,6 +11,7 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.ImageButton
 import android.widget.RelativeLayout
+import android.widget.TextView
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import pl.kflorczyk.timelapsemaker.timelapse.*
 import android.widget.Toast
@@ -24,6 +26,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStartTimelapse: ImageButton
     private lateinit var fabSettings: FloatingActionButton
 
+    private lateinit var webAccessTxtContent: TextView
+    private lateinit var resolutionTxtContent: TextView
+    private lateinit var intervalTxtContent: TextView
+    private lateinit var photosCapturedTxtContent: TextView
+    private lateinit var nextCaptureTxtContent: TextView
+
     private var surfaceCamera: SurfaceView? = null
 
     private lateinit var app:MyApplication
@@ -36,6 +44,12 @@ class MainActivity : AppCompatActivity() {
         btnStartTimelapse = findViewById(R.id.btnStartTimelapse) as ImageButton
         fabSettings = findViewById(R.id.fab) as FloatingActionButton
 
+        webAccessTxtContent = findViewById(R.id.webAccessTxtContent) as TextView
+        resolutionTxtContent = findViewById(R.id.resolutionTxtContent) as TextView
+        intervalTxtContent = findViewById(R.id.intervalTxtContent) as TextView
+        photosCapturedTxtContent = findViewById(R.id.photosCapturedTxtContent) as TextView
+        nextCaptureTxtContent = findViewById(R.id.nextCaptureTxtContent) as TextView
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         val functionAfterPermissionsDone = fun() {
@@ -43,6 +57,7 @@ class MainActivity : AppCompatActivity() {
             if(app.timelapseSettings == null) {
                 app.timelapseSettings = Util.getTimelapseSettingsFromFile(this)
             }
+            updateUIStatistics()
         }
 
         if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
@@ -80,23 +95,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         var dialogSettings = DialogSettings(this, fabSettings, object : DialogSettings.OnDialogSettingChangeListener {
-            override fun onChangePhotoResolution(resolution: Resolution) {
-            }
-
-            override fun onChangeInterval(intervalMiliseconds: Int) {
-            }
-
-            override fun onChangePhotosLimit(amount: Int) {
-            }
-
-            override fun onToggleWebServer(toggle: Boolean) {
-            }
-
-            override fun onCameraApiChange(cameraVersion: CameraVersionAPI) {
-            }
-
-            override fun onDialogExit() {
-            }
+            override fun onChangePhotoResolution(resolution: Resolution) = updateUIStatistics()
+            override fun onChangeInterval(intervalMiliseconds: Int) = updateUIStatistics()
+            override fun onChangePhotosLimit(amount: Int) = updateUIStatistics()
+            override fun onToggleWebServer(toggle: Boolean) = updateUIStatistics()
+            override fun onCameraApiChange(cameraVersion: CameraVersionAPI) = updateUIStatistics()
+            override fun onDialogExit() = updateUIStatistics()
         })
         dialogSettings.show()
 
@@ -167,5 +171,28 @@ class MainActivity : AppCompatActivity() {
             }
 
         })
+    }
+
+    private fun updateUIStatistics() {
+        if(app.timelapseSettings?.webEnabled == true) {
+            val localIp = Util.getLocalIpAddress(true) ?: "Wifi on?"
+            webAccessTxtContent.text = localIp // todo: add ":${PORT}"
+            webAccessTxtContent.setTextColor(this.resources.getColor(R.color.statsPanel_enabled))
+        } else if(app.timelapseSettings?.webEnabled == false) {
+            webAccessTxtContent.text = "Disabled"
+            webAccessTxtContent.setTextColor(this.resources.getColor(R.color.statsPanel_disabled))
+        } else {
+            webAccessTxtContent.text = "?"
+            webAccessTxtContent.setTextColor(this.resources.getColor(R.color.statsPanel_disabled))
+        }
+
+        val capturedPhotos = TimelapseController.getCapturedPhotos()
+        val maxPhotos = if(app.timelapseSettings != null) app.timelapseSettings!!.photosMax.toString() else "?"
+        val nextCapture = if(TimelapseController.getState() == TimelapseController.State.TIMELAPSE) TimelapseController.getTimeToNextCapture().div(1000f).toString() else "Off"
+
+        resolutionTxtContent.text = if(app.timelapseSettings != null) app.timelapseSettings!!.resolution.toString() else "?"
+        intervalTxtContent.text = if(app.timelapseSettings != null) "%.1fs".format(app.timelapseSettings!!.frequencyCapturing.div(1000f)) else "?"
+        photosCapturedTxtContent.text = if(app.timelapseSettings != null) "$capturedPhotos/$maxPhotos" else "?"
+        nextCaptureTxtContent.text = nextCapture
     }
 }
