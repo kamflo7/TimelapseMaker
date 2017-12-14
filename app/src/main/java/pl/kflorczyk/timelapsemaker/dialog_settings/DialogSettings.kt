@@ -99,14 +99,14 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
         options.add(DialogOption(R.drawable.ic_camera, "Camera API", getCameraApiDescription()))
         options.add(DialogOption(R.drawable.ic_remote, "WebAccess", "Access your timelapse progress through a website",
                 if (timelapseSettings.webEnabled) DialogOption.Switch.ENABLED else DialogOption.Switch.DISABLED,
-                object : CompoundButton.OnCheckedChangeListener {
-                    override fun onCheckedChanged(compoundButton: CompoundButton, b: Boolean) {
-                        Toast.makeText(this@DialogSettings.context, if (b) R.string.text_dialog_webserver_toggleOn else R.string.text_dialog_webserver_toggleOff, Toast.LENGTH_LONG).show()
+                CompoundButton.OnCheckedChangeListener { _, b ->
+                    Toast.makeText(this@DialogSettings.context, if (b) R.string.text_dialog_webserver_toggleOn else R.string.text_dialog_webserver_toggleOff, Toast.LENGTH_LONG).show()
 
-                        val sharedPreferencesManager = SharedPreferencesManager(this@DialogSettings.context)
-                        sharedPreferencesManager.setWebEnabled(b)
-                        onDialogSettingChangeListener?.onToggleWebServer(b)
-                    }
+                    timelapseSettings.webEnabled = b
+
+                    val sharedPreferencesManager = SharedPreferencesManager(this@DialogSettings.context)
+                    sharedPreferencesManager.setWebEnabled(b)
+                    onDialogSettingChangeListener?.onToggleWebServer(b)
                 }))
         options.add(DialogOption(R.drawable.ic_help, "Info", "Informations about application"))
 
@@ -200,6 +200,7 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
                                 if(which != currentCameraSelectedIndex) {
                                     var selected = if(which == 0) CameraVersionAPI.V_1 else CameraVersionAPI.V_2
 
+                                    timelapseSettings.cameraVersion = selected
                                     prefs.setCameraVersionAPI(selected)
 
                                     options[3].description = getCameraApiDescription()
