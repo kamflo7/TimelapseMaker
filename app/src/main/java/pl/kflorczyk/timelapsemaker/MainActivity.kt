@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
         val BROADCAST_MESSAGE_CAPTURED_PHOTO: String = "capturedPhoto"
         val BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES: String = "capturedPhotoBytes"
         val BROADCAST_MESSAGE_FAILED: String = "failedCapturing"
+        val BROADCAST_MESSAGE_COMPLETE: String = "completeCapturing"
     }
 
     private lateinit var surfaceContainer: RelativeLayout
@@ -174,7 +175,7 @@ class MainActivity : AppCompatActivity() {
                     TimelapseController.build(strategy, app.timelapseSettings!!)
 
                     try {
-                        TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder!!)
+                        TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder)
                     } catch(e: CameraNotAvailableException) {
                         Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
                         Util.log("camera not available exception")
@@ -219,6 +220,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 BROADCAST_MESSAGE_FAILED -> {
                     Util.log("Broadcast received msg failed")
+                }
+                BROADCAST_MESSAGE_COMPLETE -> {
+
                 }
             }
 

@@ -16,11 +16,11 @@ object TimelapseController {
     private var settings: TimelapseSettings? = null
 
     private var state:State = State.NOTHING
-    private var listenerOutside: OnTimelapseStateChangeListener? = null
+    private var listenerOutside: OnTimelapseProgressListener? = null
 
     private var capturedPhotos: Int = 0
-    private lateinit var powerManager: PowerManager
-    private lateinit var wakeLock: PowerManager.WakeLock
+    private var powerManager: PowerManager? = null
+    private var wakeLock: PowerManager.WakeLock? = null
 
 
     fun getCapturedPhotos(): Int = capturedPhotos
@@ -33,20 +33,20 @@ object TimelapseController {
         this.settings = settings
     }
 
-    fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener, context: Context) {
+    fun startTimelapse(onTimelapseProgressListener: OnTimelapseProgressListener, context: Context) {
         if(strategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
 
         powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimelapseController_WakeLock")
-        wakeLock.acquire()
+        wakeLock = powerManager!!.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimelapseController_WakeLock")
+        wakeLock!!.acquire()
 
         capturedPhotos = 0
 
-        this.listenerOutside = onTimelapseStateChangeListener
-        strategy?.startTimelapse(object : OnTimelapseStateChangeListener {
+        this.listenerOutside = onTimelapseProgressListener
+        strategy!!.startTimelapse(object : OnTimelapseStateChangeListener {
             override fun onInit() {
                 this@TimelapseController.state = State.TIMELAPSE
-                this@TimelapseController.listenerOutside!!.onInit()
+                strategy!!.capturePhoto()
             }
 
             override fun onCapture(bytes: ByteArray?) {
@@ -56,6 +56,12 @@ object TimelapseController {
 
             override fun onFail(msg: String) {
                 this@TimelapseController.listenerOutside!!.onFail(msg)
+                this@TimelapseController.stopTimelapse()
+            }
+
+            override fun onComplete() {
+                this@TimelapseController.listenerOutside!!.onComplete()
+                this@TimelapseController.stopTimelapse()
             }
         }, context)
     }
@@ -86,12 +92,19 @@ object TimelapseController {
     }
 
     fun stopTimelapse() {
-
+        strategy?.stopTimelapse()
+        wakeLock?.release()
     }
 
     enum class State {
         NOTHING,
         PREVIEW,
         TIMELAPSE
+    }
+
+    interface OnTimelapseProgressListener {
+        fun onCapture(bytes: ByteArray?)
+        fun onFail(msg: String?)
+        fun onComplete()
     }
 }

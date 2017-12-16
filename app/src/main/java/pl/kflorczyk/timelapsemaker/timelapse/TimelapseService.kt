@@ -14,7 +14,7 @@ import pl.kflorczyk.timelapsemaker.MainActivity
  */
 class TimelapseService : Service() {
 
-    private var haveToStopSignal: Boolean = false
+    private var worker: WorkerThread? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -22,39 +22,41 @@ class TimelapseService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         var runnable = Runnable {
-
-            var listener = object : OnTimelapseStateChangeListener {
-                override fun onInit() {
-                    Util.log("[Service] got onInit")
-                    TimelapseController.capturePhoto()
-                }
-
+            var listener = object : TimelapseController.OnTimelapseProgressListener {
                 override fun onCapture(bytes: ByteArray?) {
-                    Util.log("[Service] Got photo")
                     val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO)
-                    i.putExtra("imageBytes", bytes)
+                    i.putExtra(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES, bytes)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                 }
 
-                override fun onFail(msg: String) {
-                    Util.log("[Service] Got onFail")
+                override fun onFail(msg: String?) {
                     val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
+                    this@TimelapseService.stopSelf()
+                }
+
+                override fun onComplete() {
+                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_COMPLETE)
+                    LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
+                    this@TimelapseService.stopSelf()
                 }
             }
 
             try {
                 TimelapseController.startTimelapse(listener, this@TimelapseService.applicationContext)
             } catch(e: RuntimeException) {
+                val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
+                LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
+
+                this@TimelapseService.stopSelf()
                 Util.log("[TimelapseService] TimelapseController.startTimelapse caught exception ${e.message}");
             }
-
         }
 
-        var worker = WorkerThread("ServiceThread")
-        worker.start()
-        worker.waitUntilReady()
-        worker.handler.post(runnable)
+        worker = WorkerThread("ServiceThread")
+        worker!!.start()
+        worker!!.waitUntilReady()
+        worker!!.handler!!.post(runnable)
 
         return START_STICKY;
     }
@@ -62,9 +64,10 @@ class TimelapseService : Service() {
     override fun onDestroy() {
         super.onDestroy()
 
-        synchronized(this) {
-            haveToStopSignal = true
-        }
+        worker!!.handler = null
+        worker!!.quit()
+        worker!!.interrupt()
+        worker = null
     }
 
     override fun onLowMemory() {
