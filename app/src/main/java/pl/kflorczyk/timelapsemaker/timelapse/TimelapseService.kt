@@ -3,10 +3,8 @@ package pl.kflorczyk.timelapsemaker.timelapse
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
-import pl.kflorczyk.timelapsemaker.Util
-import pl.kflorczyk.timelapsemaker.WorkerThread
 import android.support.v4.content.LocalBroadcastManager
-import pl.kflorczyk.timelapsemaker.MainActivity
+import pl.kflorczyk.timelapsemaker.*
 
 
 /**
@@ -15,18 +13,35 @@ import pl.kflorczyk.timelapsemaker.MainActivity
 class TimelapseService : Service() {
 
     private var worker: WorkerThread? = null
+    private var storageManager: StorageManager? = null
 
     override fun onCreate() {
         super.onCreate()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val storageType = (application as MyApplication).timelapseSettings!!.storageType
+        storageManager = StorageManager(storageType, applicationContext)
+        if(!storageManager!!.createTimelapseDirectory()) {
+            val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
+            LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
+            Util.log("[TimelapseService] Problem with creating directory")
+            this@TimelapseService.stopSelf()
+            return START_STICKY
+        }
+
         var runnable = Runnable {
             var listener = object : TimelapseController.OnTimelapseProgressListener {
                 override fun onCapture(bytes: ByteArray?) {
                     val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO)
                     i.putExtra(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES, bytes)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
+
+                    if(bytes != null) {
+                        storageManager!!.savePhoto(bytes, TimelapseController.getCapturedPhotos())
+                    } else {
+                        Util.log("TimelapseService got onCapture() msg, but WITHOUT bytes of image") // todo: do sth about this
+                    }
                 }
 
                 override fun onFail(msg: String?) {
@@ -69,6 +84,8 @@ class TimelapseService : Service() {
         worker!!.quit()
         worker!!.interrupt()
         worker = null
+
+        TimelapseController.stopTimelapse()
     }
 
     override fun onLowMemory() {

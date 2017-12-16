@@ -106,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             btnStartTimelapse.setImageResource(R.drawable.stop)
             startCountdownNextPhotoThread()
         } else {
-            TimelapseController.stopTimelapse()
+            stopService(Intent(this, TimelapseService::class.java))
             onTimelapseCompleteOrFail()
         }
     }

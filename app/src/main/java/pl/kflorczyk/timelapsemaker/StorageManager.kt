@@ -3,30 +3,74 @@ package pl.kflorczyk.timelapsemaker
 import android.content.Context
 import android.os.Environment
 import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
+import java.io.FileOutputStream
+import java.io.IOException
 
-/**
- * Created by Kamil on 2017-12-11.
- */
-object StorageManager {
+class StorageManager(type: StorageType, context: Context) {
 
-    fun getStorages(context: Context): List<Pair<File, StorageType>> {
-        val externalFilesDir = context.getExternalFilesDirs(Environment.DIRECTORY_PICTURES)
+    private val type: StorageType = type
+    private val context: Context = context
+    private val storageBase: File
+    private var savingPath: File? = null
 
-        val validate = fun(f: File): Boolean {
-            val accessible = f.canWrite() && f.canRead()
-            return accessible
+    init {
+        val storages = getStorages(context)
+        val storage = storages.find { p -> p.second == this.type } ?: throw RuntimeException("Storage not found for given type")
+        storageBase = storage.first
+    }
+
+    fun createTimelapseDirectory(): Boolean {
+        val sdf = SimpleDateFormat("yyyyMMdd_HHmmss")
+        val dirName = sdf.format(Date())
+
+        savingPath = File(getPath(dirName))
+        return savingPath!!.mkdirs()
+    }
+
+    fun getPath(directoryName: String): String {
+        return "${storageBase.absolutePath}/$directoryName/"
+    }
+
+    fun savePhoto(bytes: ByteArray, number: Int) {
+        if(savingPath == null) {
+            throw RuntimeException("Saving path is not specified (Did you invoke createTimelapseDirectory?)")
         }
 
-        val list = ArrayList<Pair<File, StorageType>>()
+        val photo = File(String.format("%s/photo%d.jpg", savingPath!!.absolutePath, number))
 
-        for (f in externalFilesDir) {
-            if (validate(f)) {
-                val type = if (f.absolutePath.contains("emulated")) StorageType.EXTERNAL_EMULATED else StorageType.REAL_SDCARD
-                list.add(Pair(f, type))
+        try {
+            val fos = FileOutputStream(photo.path)
+            fos.write(bytes)
+            fos.close()
+            Util.log("StorageManager::savingImage to " + photo.absolutePath)
+        } catch (e: IOException) {
+            Util.log("StorageManager::saveImage() exception -> " + e.message)
+            throw e
+        }
+    }
+
+    companion object {
+        fun getStorages(context: Context): List<Pair<File, StorageType>> {
+            val externalFilesDir = context.getExternalFilesDirs(Environment.DIRECTORY_PICTURES)
+
+            val validate = fun(f: File): Boolean {
+                val accessible = f.canWrite() && f.canRead()
+                return accessible
             }
-        }
 
-        return list
+            val list = ArrayList<Pair<File, StorageType>>()
+
+            for (f in externalFilesDir) {
+                if (validate(f)) {
+                    val type = if (f.absolutePath.contains("emulated")) StorageType.EXTERNAL_EMULATED else StorageType.REAL_SDCARD
+                    list.add(Pair(f, type))
+                }
+            }
+
+            return list
+        }
     }
 
     enum class StorageType {
