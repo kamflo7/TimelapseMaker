@@ -56,6 +56,13 @@ object TimelapseController {
 
             override fun onCapture(bytes: ByteArray?) {
                 capturedPhotos++
+
+                if(capturedPhotos == settings!!.photosMax) {
+                    this@TimelapseController.stopTimelapse()
+                    this@TimelapseController.listenerOutside!!.onComplete()
+                    return
+                }
+
                 this@TimelapseController.listenerOutside!!.onCapture(bytes)
 
                 var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
@@ -71,22 +78,10 @@ object TimelapseController {
             }
 
             override fun onFail(msg: String) {
+                this@TimelapseController.stopTimelapse()
                 this@TimelapseController.listenerOutside!!.onFail(msg)
-                this@TimelapseController.stopTimelapse()
-            }
-
-            override fun onComplete() {
-                this@TimelapseController.listenerOutside!!.onComplete()
-                this@TimelapseController.stopTimelapse()
             }
         }, context)
-    }
-
-    fun capturePhoto() {
-        if(state != State.TIMELAPSE)
-            return
-
-        strategy?.capturePhoto()
     }
 
     fun startPreviewing(settings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
@@ -104,12 +99,21 @@ object TimelapseController {
     fun getState():State = state
 
     fun stopPreview() {
-        strategy?.stopPreview()
+        if(state == State.PREVIEW) {
+            strategy?.stopPreview()
+
+            state = State.NOTHING
+        }
     }
 
     fun stopTimelapse() {
-        strategy?.stopTimelapse()
-        wakeLock?.release()
+        if(state == State.TIMELAPSE) {
+            strategy?.stopTimelapse()
+            wakeLock?.release()
+
+            capturedPhotos = 0
+            state = State.NOTHING
+        }
     }
 
     enum class State {

@@ -250,9 +250,17 @@ class MainActivity : AppCompatActivity() {
                 }
                 BROADCAST_MESSAGE_FAILED -> {
                     Util.log("Broadcast received msg failed")
+                    stopCountdownNextPhotoThread()
+                    updateUIStatistics()
+                    startPreview()
+                    this@MainActivity.btnStartTimelapse.setImageResource(R.drawable.record)
                 }
                 BROADCAST_MESSAGE_COMPLETE -> {
-
+                    Util.log("Broadcast received msg complete")
+                    stopCountdownNextPhotoThread()
+                    updateUIStatistics()
+                    startPreview()
+                    this@MainActivity.btnStartTimelapse.setImageResource(R.drawable.record)
                 }
             }
         }

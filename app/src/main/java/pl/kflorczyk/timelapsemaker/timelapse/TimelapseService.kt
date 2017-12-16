@@ -39,6 +39,7 @@ class TimelapseService : Service() {
                     val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_COMPLETE)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                     this@TimelapseService.stopSelf()
+                    Util.log("TimelapseService::onComplete -> should correctly stop all things")
                 }
             }
 

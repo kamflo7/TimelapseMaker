@@ -7,5 +7,4 @@ interface OnTimelapseStateChangeListener {
     fun onInit()
     fun onCapture(bytes: ByteArray?)
     fun onFail(msg: String)
-    fun onComplete()
 }
