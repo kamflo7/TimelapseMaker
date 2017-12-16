@@ -59,7 +59,7 @@ class SharedPreferencesManager(context:Context) {
             return null
         }
 
-        val parts: List<String> = resolutionStr.split(Pattern.quote("x"))
+        val parts: List<String> = resolutionStr.split("x")
         if(parts.size == 2) {
             return Resolution(
                 Integer.parseInt(parts[0]),
