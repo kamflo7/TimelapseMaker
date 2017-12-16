@@ -55,6 +55,7 @@ object TimelapseController {
             }
 
             override fun onCapture(bytes: ByteArray?) {
+                Util.log("TimelapseController::onCapture($capturedPhotos)")
                 capturedPhotos++
 
                 if(capturedPhotos == settings!!.photosMax) {

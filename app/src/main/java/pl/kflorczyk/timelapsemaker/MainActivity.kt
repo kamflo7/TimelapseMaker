@@ -92,6 +92,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
 
+        stopCountdownNextPhotoThread()
         Util.log("MainActivity::onDestroy")
     }
 
@@ -104,6 +105,9 @@ class MainActivity : AppCompatActivity() {
             startService(Intent(this, TimelapseService::class.java))
             btnStartTimelapse.setImageResource(R.drawable.stop)
             startCountdownNextPhotoThread()
+        } else {
+            TimelapseController.stopTimelapse()
+            onTimelapseCompleteOrFail()
         }
     }
 
@@ -118,10 +122,14 @@ class MainActivity : AppCompatActivity() {
             override fun onChangePhotosLimit(amount: Int) = updateUIStatistics()
             override fun onToggleWebServer(toggle: Boolean) = updateUIStatistics()
             override fun onCameraApiChange(cameraVersion: CameraVersionAPI) = updateUIStatistics()
-            override fun onDialogExit() = updateUIStatistics()
+            override fun onDialogExit() {
+                updateUIStatistics()
+                if(TimelapseController.getState() == TimelapseController.State.NOTHING) {
+                    startPreview()
+                }
+            }
         })
         dialogSettings.show()
-
     }
 
     override fun onStart() {
@@ -140,6 +148,8 @@ class MainActivity : AppCompatActivity() {
         if(Util.isMyServiceRunning(TimelapseService::class.java, this)
                 && TimelapseController.getState() == TimelapseController.State.TIMELAPSE) {
             startCountdownNextPhotoThread()
+            updateUIStatistics()
+            btnStartTimelapse.setImageResource(R.drawable.record)
         } else {
             startPreview()
         }
@@ -250,20 +260,21 @@ class MainActivity : AppCompatActivity() {
                 }
                 BROADCAST_MESSAGE_FAILED -> {
                     Util.log("Broadcast received msg failed")
-                    stopCountdownNextPhotoThread()
-                    updateUIStatistics()
-                    startPreview()
-                    this@MainActivity.btnStartTimelapse.setImageResource(R.drawable.record)
+                    onTimelapseCompleteOrFail()
                 }
                 BROADCAST_MESSAGE_COMPLETE -> {
                     Util.log("Broadcast received msg complete")
-                    stopCountdownNextPhotoThread()
-                    updateUIStatistics()
-                    startPreview()
-                    this@MainActivity.btnStartTimelapse.setImageResource(R.drawable.record)
+                    onTimelapseCompleteOrFail()
                 }
             }
         }
+    }
+
+    private fun onTimelapseCompleteOrFail() {
+        stopCountdownNextPhotoThread()
+        updateUIStatistics()
+        startPreview()
+        this@MainActivity.btnStartTimelapse.setImageResource(R.drawable.record)
     }
 
     private fun startCountdownNextPhotoThread() {
