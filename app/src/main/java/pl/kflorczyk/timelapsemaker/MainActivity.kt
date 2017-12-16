@@ -46,9 +46,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nextCaptureTxtContent: TextView
 
     private var surfaceCamera: SurfaceView? = null
-//    private var cameraSurfaceHolder: SurfaceHolder? = null
 
     private lateinit var app:MyApplication
+    private var countdownThread: Thread? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,6 +91,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
+
+        Util.log("MainActivity::onDestroy")
     }
 
     fun btnStartTimelapseClick(view: View) {
@@ -101,6 +103,7 @@ class MainActivity : AppCompatActivity() {
 
             startService(Intent(this, TimelapseService::class.java))
             btnStartTimelapse.setImageResource(R.drawable.stop)
+            startCountdownNextPhotoThread()
         }
     }
 
@@ -128,19 +131,15 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-
-        if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
-            stopService(Intent(this, TimelapseService::class.java))
-        }
-
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
     }
 
     override fun onResume() {
         super.onResume()
 
-        if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
-
+        if(Util.isMyServiceRunning(TimelapseService::class.java, this)
+                && TimelapseController.getState() == TimelapseController.State.TIMELAPSE) {
+            startCountdownNextPhotoThread()
         } else {
             startPreview()
         }
@@ -152,6 +151,8 @@ class MainActivity : AppCompatActivity() {
         if(TimelapseController.getState() == TimelapseController.State.PREVIEW) {
             TimelapseController.stopPreview()
         }
+
+        stopCountdownNextPhotoThread()
     }
 
     private fun startPreview() {
@@ -254,7 +255,41 @@ class MainActivity : AppCompatActivity() {
 
                 }
             }
+        }
+    }
 
+    private fun startCountdownNextPhotoThread() {
+        var runnable = Runnable {
+            while(true) {
+                if(Thread.currentThread().isInterrupted) {
+                    return@Runnable
+                }
+
+                var timeToCapture = "%.1fs".format(TimelapseController.getTimeToNextCapture().div(1000f))
+
+                runOnUiThread {
+                    nextCaptureTxtContent.text = timeToCapture
+                }
+
+                try {
+                    Thread.sleep(100)
+                } catch(e: InterruptedException) {
+                    return@Runnable
+                }
+            }
+        }
+
+        if(countdownThread == null) {
+            countdownThread = Thread(runnable)
+            countdownThread!!.start()
+        }
+    }
+
+    private fun stopCountdownNextPhotoThread() {
+        if(countdownThread != null) {
+            countdownThread!!.interrupt()
+            countdownThread!!.join()
+            countdownThread = null
         }
     }
 }

@@ -4,7 +4,7 @@ import android.content.Context
 import android.view.SurfaceHolder
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import android.os.PowerManager
-
+import pl.kflorczyk.timelapsemaker.Util
 
 
 /**
@@ -22,10 +22,14 @@ object TimelapseController {
     private var powerManager: PowerManager? = null
     private var wakeLock: PowerManager.WakeLock? = null
 
+    private var timeAtStartCapturingPhoto: Long = 0
+    private var timeAtWillBeNextCapture: Long = 0
 
     fun getCapturedPhotos(): Int = capturedPhotos
     fun getTimeToNextCapture(): Long {
-        return 500 // todo: implement this
+        var timeLeft = timeAtWillBeNextCapture - System.currentTimeMillis()
+        if(timeLeft < 0) timeLeft = 0
+        return timeLeft
     }
 
     fun build(strategy: TimelapseControllerStrategy, settings: TimelapseSettings) {
@@ -34,7 +38,7 @@ object TimelapseController {
     }
 
     fun startTimelapse(onTimelapseProgressListener: OnTimelapseProgressListener, context: Context) {
-        if(strategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
+        if(strategy == null || settings == null) throw RuntimeException("TimelapseControllerStrategy is not prepared correctly (Did you invoke build() method?)")
 
         powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager!!.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimelapseController_WakeLock")
@@ -46,13 +50,23 @@ object TimelapseController {
         strategy!!.startTimelapse(object : OnTimelapseStateChangeListener {
             override fun onInit() {
                 this@TimelapseController.state = State.TIMELAPSE
+                timeAtStartCapturingPhoto = System.currentTimeMillis()
                 strategy!!.capturePhoto()
             }
 
             override fun onCapture(bytes: ByteArray?) {
                 capturedPhotos++
                 this@TimelapseController.listenerOutside!!.onCapture(bytes)
-                Thread.sleep(2000)
+
+                var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+                if(delayToNextCapture < 0)
+                    delayToNextCapture = 0
+
+                timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+                Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+                Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+
+                timeAtStartCapturingPhoto = System.currentTimeMillis()
                 strategy!!.capturePhoto()
             }
 
