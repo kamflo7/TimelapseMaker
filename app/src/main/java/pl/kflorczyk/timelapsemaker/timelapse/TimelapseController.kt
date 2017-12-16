@@ -3,6 +3,9 @@ package pl.kflorczyk.timelapsemaker.timelapse
 import android.content.Context
 import android.view.SurfaceHolder
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
+import android.os.PowerManager
+
+
 
 /**
  * Created by Kamil on 2017-12-09.
@@ -16,6 +19,9 @@ object TimelapseController {
     private var listenerOutside: OnTimelapseStateChangeListener? = null
 
     private var capturedPhotos: Int = 0
+    private lateinit var powerManager: PowerManager
+    private lateinit var wakeLock: PowerManager.WakeLock
+
 
     fun getCapturedPhotos(): Int = capturedPhotos
     fun getTimeToNextCapture(): Long {
@@ -30,6 +36,12 @@ object TimelapseController {
     fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener, context: Context) {
         if(strategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
 
+        powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimelapseController_WakeLock")
+        wakeLock.acquire()
+
+        capturedPhotos = 0
+
         this.listenerOutside = onTimelapseStateChangeListener
         strategy?.startTimelapse(object : OnTimelapseStateChangeListener {
             override fun onInit() {
@@ -38,6 +50,7 @@ object TimelapseController {
             }
 
             override fun onCapture(bytes: ByteArray?) {
+                capturedPhotos++
                 this@TimelapseController.listenerOutside!!.onCapture(bytes)
             }
 
@@ -70,6 +83,10 @@ object TimelapseController {
 
     fun stopPreview() {
         strategy?.stopPreview()
+    }
+
+    fun stopTimelapse() {
+
     }
 
     enum class State {

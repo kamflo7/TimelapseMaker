@@ -40,6 +40,11 @@ class TimelapseControllerV1Strategy : TimelapseControllerStrategy {
         }
     }
 
+    override fun stopTimelapse() {
+        camera?.stop()
+        camera = null
+    }
+
     override fun capturePhoto() {
         camera!!.capturePhoto(object : CameraV1.CameraStateChangeListener {
             override fun onCapture(bytes: ByteArray?) {

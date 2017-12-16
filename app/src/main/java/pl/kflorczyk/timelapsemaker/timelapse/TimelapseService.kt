@@ -5,6 +5,9 @@ import android.content.Intent
 import android.os.IBinder
 import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.WorkerThread
+import android.support.v4.content.LocalBroadcastManager
+import pl.kflorczyk.timelapsemaker.MainActivity
+
 
 /**
  * Created by Kamil on 2017-12-09.
@@ -20,12 +23,6 @@ class TimelapseService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         var runnable = Runnable {
 
-//            synchronized(this@TimelapseService) {
-//                if(haveToStopSignal) {
-//                    return@Runnable
-//                }
-//            }
-
             var listener = object : OnTimelapseStateChangeListener {
                 override fun onInit() {
                     Util.log("[Service] got onInit")
@@ -34,10 +31,15 @@ class TimelapseService : Service() {
 
                 override fun onCapture(bytes: ByteArray?) {
                     Util.log("[Service] Got photo")
+                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO)
+                    i.putExtra("imageBytes", bytes)
+                    LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                 }
 
                 override fun onFail(msg: String) {
                     Util.log("[Service] Got onFail")
+                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
+                    LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                 }
             }
 
@@ -74,4 +76,9 @@ class TimelapseService : Service() {
         return null
     }
 
+    private fun getSendingMessageIntent(message: String): Intent {
+        val intent = Intent(MainActivity.BROADCAST_FILTER)
+        intent.putExtra(MainActivity.BROADCAST_MSG, message)
+        return intent
+    }
 }

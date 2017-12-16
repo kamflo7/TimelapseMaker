@@ -1,10 +1,13 @@
 package pl.kflorczyk.timelapsemaker
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
-import android.content.res.Resources
+import android.content.IntentFilter
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
 import android.support.design.widget.FloatingActionButton
+import android.support.v4.content.LocalBroadcastManager
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.View
@@ -21,6 +24,13 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        val BROADCAST_FILTER = "pl.kflorczyk.timelapsemaker.timelapse.TimelapseService"
+        var BROADCAST_MSG: String = "action"
+        val BROADCAST_MESSAGE_CAPTURED_PHOTO: String = "capturedPhoto"
+        val BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES: String = "capturedPhotoBytes"
+        val BROADCAST_MESSAGE_FAILED: String = "failedCapturing"
+    }
 
     private lateinit var surfaceContainer: RelativeLayout
     private lateinit var btnStartTimelapse: ImageButton
@@ -58,6 +68,7 @@ class MainActivity : AppCompatActivity() {
                 app.timelapseSettings = Util.getTimelapseSettingsFromFile(this)
             }
             updateUIStatistics()
+            LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(BROADCAST_FILTER))
         }
 
         if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
@@ -86,6 +97,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             startService(Intent(this, TimelapseService::class.java))
+            btnStartTimelapse.setImageResource(R.drawable.stop)
         }
     }
 
@@ -169,7 +181,6 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-
         })
     }
 
@@ -194,5 +205,23 @@ class MainActivity : AppCompatActivity() {
         intervalTxtContent.text = if(app.timelapseSettings != null) "%.1fs".format(app.timelapseSettings!!.frequencyCapturing.div(1000f)) else "?"
         photosCapturedTxtContent.text = if(app.timelapseSettings != null) "$capturedPhotos/$maxPhotos" else "?"
         nextCaptureTxtContent.text = nextCapture
+    }
+
+    private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            var msg = intent?.getStringExtra(BROADCAST_MSG)
+
+            when(msg) {
+                BROADCAST_MESSAGE_CAPTURED_PHOTO -> {
+                    val byteArrayExtra = intent?.getByteArrayExtra(BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES)
+                    Util.log("Broadcast received msg captured photo " + (if(byteArrayExtra != null) byteArrayExtra else "null"))
+                    updateUIStatistics()
+                }
+                BROADCAST_MESSAGE_FAILED -> {
+                    Util.log("Broadcast received msg failed")
+                }
+            }
+
+        }
     }
 }

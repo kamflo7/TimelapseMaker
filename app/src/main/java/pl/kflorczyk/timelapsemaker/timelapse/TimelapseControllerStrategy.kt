@@ -12,4 +12,5 @@ interface TimelapseControllerStrategy {
 
     fun startTimelapse(onTimelapseStateChangeListener: OnTimelapseStateChangeListener, context: Context)
     fun capturePhoto()
+    fun stopTimelapse()
 }
