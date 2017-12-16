@@ -22,6 +22,8 @@ import com.tbruyelle.rxpermissions2.RxPermissions
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -44,6 +46,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nextCaptureTxtContent: TextView
 
     private var surfaceCamera: SurfaceView? = null
+//    private var cameraSurfaceHolder: SurfaceHolder? = null
 
     private lateinit var app:MyApplication
 
@@ -69,7 +72,6 @@ class MainActivity : AppCompatActivity() {
                 app.timelapseSettings = Util.getTimelapseSettingsFromFile(this)
             }
             updateUIStatistics()
-            LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(BROADCAST_FILTER))
         }
 
         if(!Util.checkPermissions(Util.NECESSARY_PERMISSIONS_START_APP, this)) {
@@ -121,6 +123,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
+        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(BROADCAST_FILTER))
     }
 
     override fun onStop() {
@@ -129,6 +132,8 @@ class MainActivity : AppCompatActivity() {
         if(Util.isMyServiceRunning(TimelapseService::class.java, this)) {
             stopService(Intent(this, TimelapseService::class.java))
         }
+
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
     }
 
     override fun onResume() {
@@ -148,7 +153,6 @@ class MainActivity : AppCompatActivity() {
             TimelapseController.stopPreview()
         }
     }
-
 
     private fun startPreview() {
         if(surfaceContainer.childCount > 0) {
@@ -215,8 +219,33 @@ class MainActivity : AppCompatActivity() {
             when(msg) {
                 BROADCAST_MESSAGE_CAPTURED_PHOTO -> {
                     val byteArrayExtra = intent?.getByteArrayExtra(BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES)
-                    Util.log("Broadcast received msg captured photo " + (if(byteArrayExtra != null) byteArrayExtra else "null"))
                     updateUIStatistics()
+
+                    if(byteArrayExtra != null) {
+                        if(surfaceContainer.childCount > 0) {
+                            surfaceContainer.removeView(surfaceCamera)
+                        }
+
+                        surfaceCamera = SurfaceView(this@MainActivity)
+                        surfaceCamera!!.layoutParams = RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT)
+                        surfaceContainer.addView(surfaceCamera)
+
+                        surfaceCamera!!.holder.addCallback(object: SurfaceHolder.Callback {
+                            override fun surfaceChanged(surfaceHolder: SurfaceHolder?, p1: Int, p2: Int, p3: Int) {}
+                            override fun surfaceDestroyed(p0: SurfaceHolder?) { }
+                            override fun surfaceCreated(surfaceHolder: SurfaceHolder?) {
+                                if(surfaceHolder != null) {
+                                    val c = surfaceHolder.lockCanvas()
+                                    if (c != null) {
+                                        val bitmap = BitmapFactory.decodeByteArray(byteArrayExtra, 0, byteArrayExtra.size)
+                                        val scaled = Bitmap.createScaledBitmap(bitmap, c.width, c.height, true)
+                                        c.drawBitmap(scaled, 0f, 0f, null)
+                                        surfaceHolder.unlockCanvasAndPost(c)
+                                    }
+                                }
+                            }
+                        })
+                    }
                 }
                 BROADCAST_MESSAGE_FAILED -> {
                     Util.log("Broadcast received msg failed")

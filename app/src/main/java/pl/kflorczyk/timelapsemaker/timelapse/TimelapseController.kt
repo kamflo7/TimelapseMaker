@@ -52,6 +52,8 @@ object TimelapseController {
             override fun onCapture(bytes: ByteArray?) {
                 capturedPhotos++
                 this@TimelapseController.listenerOutside!!.onCapture(bytes)
+                Thread.sleep(2000)
+                strategy!!.capturePhoto()
             }
 
             override fun onFail(msg: String) {
