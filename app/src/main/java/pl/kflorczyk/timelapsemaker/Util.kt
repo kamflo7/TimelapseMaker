@@ -39,6 +39,14 @@ object Util {
     fun getTimelapseSettingsFromFile(context:Context):TimelapseSettings {
         var prefsManager = SharedPreferencesManager(context)
 
+        var choosenStorage = prefsManager.getStorageType()
+        if(choosenStorage == null) {
+            val availableStorages = StorageManager.getStorages(context)
+            var lookForSDCard = availableStorages.find { p -> p.second == StorageManager.StorageType.REAL_SDCARD }
+            if(lookForSDCard == null) choosenStorage = availableStorages[0].second
+            else choosenStorage = lookForSDCard.second
+        }
+
         var settings = TimelapseSettings(
             prefsManager.getPhotosMax() ?: 500,
             prefsManager.getFrequencyCapturing() ?: 3000,
@@ -48,7 +56,8 @@ object Util {
             prefsManager.getWebEnabled(),
 prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
             prefsManager.getActiveCamera(),
-            prefsManager.getWebAdminPassword()
+            prefsManager.getWebAdminPassword(),
+            choosenStorage!!
         )
 
         if(settings.cameraId == null) {

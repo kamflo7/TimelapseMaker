@@ -59,7 +59,7 @@ class TimelapseService : Service() {
         worker!!.waitUntilReady()
         worker!!.handler!!.post(runnable)
 
-        return START_STICKY;
+        return START_STICKY
     }
 
     override fun onDestroy() {

@@ -1,5 +1,6 @@
 package pl.kflorczyk.timelapsemaker.timelapse
 
+import pl.kflorczyk.timelapsemaker.StorageManager
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.camera.PictureFormat
 import pl.kflorczyk.timelapsemaker.camera.Resolution
@@ -15,4 +16,5 @@ data class TimelapseSettings(var photosMax:Int,
                              var webEnabled: Boolean,
                              var cameraVersion: CameraVersionAPI,
                              var cameraId: String?,
-                             var adminPassword: Pair<Boolean, String?>)
+                             var adminPassword: Pair<Boolean, String?>,
+                             var storageType: StorageManager.StorageType)

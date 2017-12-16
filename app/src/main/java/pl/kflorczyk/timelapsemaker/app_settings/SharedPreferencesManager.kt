@@ -2,6 +2,7 @@ package pl.kflorczyk.timelapsemaker.app_settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import pl.kflorczyk.timelapsemaker.StorageManager
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.validators.PasswordValidator
@@ -18,9 +19,25 @@ class SharedPreferencesManager(context:Context) {
     private val KEY_CAMERA_RESOLUTION = "$PACKAGE.settingsFile.cameraapi.resolution"
     private val KEY_CAMERA_FREQUENCY = "$PACKAGE.settingsFile.cameraapi.frequency"
     private val KEY_CAMERA_ACTIVEID = "$PACKAGE.settingsFile.cameraapi.activeid"
+    private val KEY_STORAGE_TYPE = "$PACKAGE.settingsFile.storagetype"
 
     private val context:Context = context
     private val sharedPref:SharedPreferences = context.getSharedPreferences(FILE_KEY, Context.MODE_PRIVATE)
+
+    fun setStorageType(type:StorageManager.StorageType) {
+        sharedPref.edit().putInt(KEY_STORAGE_TYPE, type.ordinal).apply()
+    }
+
+    fun getStorageType():StorageManager.StorageType? {
+        val value = sharedPref.getInt(KEY_STORAGE_TYPE, -1)
+        val finalValue: StorageManager.StorageType?
+        when(value) {
+            0 -> finalValue = StorageManager.StorageType.EXTERNAL_EMULATED
+            1 -> finalValue = StorageManager.StorageType.REAL_SDCARD
+            else -> finalValue = null
+        }
+        return finalValue
+    }
 
     fun getActiveCamera(): String? {
         val cameraID = sharedPref.getString(KEY_CAMERA_ACTIVEID, "null")

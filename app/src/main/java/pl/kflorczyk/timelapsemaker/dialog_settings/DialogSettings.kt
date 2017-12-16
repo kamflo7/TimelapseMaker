@@ -21,6 +21,7 @@ import android.view.Window
 import android.widget.*
 import pl.kflorczyk.timelapsemaker.MyApplication
 import pl.kflorczyk.timelapsemaker.R
+import pl.kflorczyk.timelapsemaker.StorageManager
 import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.app_settings.SharedPreferencesManager
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
@@ -86,10 +87,9 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
     }
 
     fun getIntervalDescription(): String = "%.1fs".format(timelapseSettings.frequencyCapturing.div(1000f))
-
     fun getPhotosLimitDescription(): String = "${timelapseSettings.photosMax}"
-
     fun getCameraApiDescription(): String = if(timelapseSettings.cameraVersion == CameraVersionAPI.V_1) "v1" else "v2"
+    fun getStorageDescription(): String = if(timelapseSettings.storageType == StorageManager.StorageType.EXTERNAL_EMULATED) "External Emulated" else "Physic SD Card"
 
     private fun setListViewClickListenerForBasicCategory(listView: ListView) {
         val options = ArrayList<DialogOption>()
@@ -108,6 +108,7 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
                     sharedPreferencesManager.setWebEnabled(b)
                     onDialogSettingChangeListener?.onToggleWebServer(b)
                 }))
+        options.add(DialogOption(R.drawable.ic_sd_storage, "Storage", getStorageDescription()))
         options.add(DialogOption(R.drawable.ic_help, "Info", "Informations about application"))
 
 
@@ -236,6 +237,32 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
                             }).create().show()
                 }
                 5 -> {
+                    val storages = StorageManager.getStorages(context)
+                    val currentStorageType = prefs.getStorageType()
+                    var resOptions = Array<String>(storages.size, { i-> "$i" })
+
+                    var i = 0
+                    for(r in storages) {
+                        resOptions[i++] = if(r.second == StorageManager.StorageType.EXTERNAL_EMULATED) "External Emulated" else "Real SDCard"
+                    }
+
+                    AlertDialog.Builder(this@DialogSettings.context)
+                            .setTitle(R.string.dialog_set_storage)
+                            .setItems(resOptions, DialogInterface.OnClickListener { dialog, which ->
+                                dialog.dismiss()
+
+                                var selectedStorage = storages[which]
+                                if(currentStorageType == null || (selectedStorage.second != currentStorageType)) {
+                                    prefs.setStorageType(selectedStorage.second)
+                                    timelapseSettings.storageType = selectedStorage.second
+
+                                    options[5].description = getStorageDescription()
+                                    adapter.notifyDataSetChanged()
+                                    this@DialogSettings.onDialogSettingChangeListener?.onStorageTypeChange(selectedStorage.second)
+                                }
+                            }).create().show()
+                }
+                6 -> {
                     var msg = StringBuilder()
                     msg.append("Simple app to shoot timelapses")
                     msg.append("\n\nVersion: " + Util.getApplicationVersion(this@DialogSettings.context))
@@ -295,6 +322,7 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
         fun onChangePhotosLimit(amount: Int)
         fun onToggleWebServer(toggle: Boolean)
         fun onCameraApiChange(cameraVersion: CameraVersionAPI)
+        fun onStorageTypeChange(storageType: StorageManager.StorageType)
 
         fun onDialogExit()
     }

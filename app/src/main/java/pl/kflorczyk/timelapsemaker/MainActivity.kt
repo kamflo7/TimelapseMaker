@@ -122,6 +122,7 @@ class MainActivity : AppCompatActivity() {
             override fun onChangePhotosLimit(amount: Int) = updateUIStatistics()
             override fun onToggleWebServer(toggle: Boolean) = updateUIStatistics()
             override fun onCameraApiChange(cameraVersion: CameraVersionAPI) = updateUIStatistics()
+            override fun onStorageTypeChange(storageType: StorageManager.StorageType) {}
             override fun onDialogExit() {
                 updateUIStatistics()
                 if(TimelapseController.getState() == TimelapseController.State.NOTHING) {
