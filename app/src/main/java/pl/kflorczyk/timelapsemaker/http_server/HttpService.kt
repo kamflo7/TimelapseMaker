@@ -21,7 +21,7 @@ class HttpService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        server = HttpServer(PORT)
+        server = HttpServer(PORT, applicationContext)
         try {
             server!!.start()
         } catch(e: IOException) {
