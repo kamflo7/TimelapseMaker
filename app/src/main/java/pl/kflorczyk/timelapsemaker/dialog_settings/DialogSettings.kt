@@ -243,7 +243,10 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
 
                     var i = 0
                     for(r in storages) {
-                        resOptions[i++] = if(r.second == StorageManager.StorageType.EXTERNAL_EMULATED) "External Emulated" else "Real SDCard"
+                        resOptions[i++] = if(r.second == StorageManager.StorageType.EXTERNAL_EMULATED)
+                            "External Emulated (%s)".format(r.first.absolutePath)
+                        else
+                            "Real SDCard (%s)".format(r.first.absolutePath)
                     }
 
                     AlertDialog.Builder(this@DialogSettings.context)
@@ -252,6 +255,7 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
                                 dialog.dismiss()
 
                                 var selectedStorage = storages[which]
+
                                 if(currentStorageType == null || (selectedStorage.second != currentStorageType)) {
                                     prefs.setStorageType(selectedStorage.second)
                                     timelapseSettings.storageType = selectedStorage.second
