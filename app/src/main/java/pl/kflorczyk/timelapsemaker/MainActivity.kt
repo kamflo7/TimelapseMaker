@@ -24,6 +24,7 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import pl.kflorczyk.timelapsemaker.http_server.HttpService
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -120,7 +121,14 @@ class MainActivity : AppCompatActivity() {
             override fun onChangePhotoResolution(resolution: Resolution) = updateUIStatistics()
             override fun onChangeInterval(intervalMiliseconds: Int) = updateUIStatistics()
             override fun onChangePhotosLimit(amount: Int) = updateUIStatistics()
-            override fun onToggleWebServer(toggle: Boolean) = updateUIStatistics()
+            override fun onToggleWebServer(toggle: Boolean) {
+                updateUIStatistics()
+                if(toggle && !Util.isMyServiceRunning(HttpService::class.java, this@MainActivity)) {
+                    startService(Intent(this@MainActivity, HttpService::class.java))
+                } else if(!toggle && Util.isMyServiceRunning(HttpService::class.java, this@MainActivity)) {
+                    stopService(Intent(this@MainActivity, HttpService::class.java))
+                }
+            }
             override fun onCameraApiChange(cameraVersion: CameraVersionAPI) = updateUIStatistics()
             override fun onStorageTypeChange(storageType: StorageManager.StorageType) {}
             override fun onDialogExit() {
@@ -136,11 +144,19 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(BROADCAST_FILTER))
+
+        if(app.timelapseSettings!!.webEnabled && !Util.isMyServiceRunning(HttpService::class.java, this)) {
+            startService(Intent(this, HttpService::class.java))
+        }
     }
 
     override fun onStop() {
         super.onStop()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
+
+        if(TimelapseController.getState() != TimelapseController.State.TIMELAPSE) {
+            stopService(Intent(this, HttpService::class.java))
+        }
     }
 
     override fun onResume() {
@@ -203,8 +219,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateUIStatistics() {
         if(app.timelapseSettings?.webEnabled == true) {
-            val localIp = Util.getLocalIpAddress(true) ?: "Wifi on?"
-            webAccessTxtContent.text = localIp // todo: add ":${PORT}"
+            val ip = Util.getLocalIpAddress(true)
+            val localIp = if(ip != null) "%s:%d".format(ip, HttpService.PORT) else "Wifi off?"
+            webAccessTxtContent.text = localIp
             webAccessTxtContent.setTextColor(this.resources.getColor(R.color.statsPanel_enabled))
         } else if(app.timelapseSettings?.webEnabled == false) {
             webAccessTxtContent.text = "Disabled"

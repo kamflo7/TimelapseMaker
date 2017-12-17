@@ -30,7 +30,8 @@
         </activity>
 
 
-        <service android:name=".timelapse.TimelapseService"></service>
+        <service android:name=".timelapse.TimelapseService" />
+        <service android:name=".http_server.HttpService" />
         <!--<activity android:namMainActivityvity"></activity>-->
     </application>
 
