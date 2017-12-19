@@ -8,8 +8,10 @@ import android.content.IntentFilter
 import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.BatteryManager
+import android.os.Build
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.PermissionChecker
+import android.telephony.TelephonyManager
 import android.util.Base64
 import android.util.Log
 import android.widget.Toast
@@ -21,7 +23,7 @@ import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
 
 import java.net.InetAddress
 import java.net.NetworkInterface
-import java.util.Collections
+import java.util.*
 
 /**
  * Created by Kamil on 11/13/2016.
@@ -35,6 +37,10 @@ object Util {
             Manifest.permission.ACCESS_WIFI_STATE,
             Manifest.permission.INTERNET,
             Manifest.permission.WAKE_LOCK)
+
+    fun generateDeviceUUID(): String = "%s_%s".format(android.os.Build.PRODUCT, UUID.randomUUID())
+
+    fun getAvailableCameraAPI():Array<CameraVersionAPI> = if(Build.VERSION.SDK_INT >= 21) arrayOf(CameraVersionAPI.V_1, CameraVersionAPI.V_2) else arrayOf(CameraVersionAPI.V_1)
 
     fun getTimelapseSettingsFromFile(context:Context):TimelapseSettings {
         var prefsManager = SharedPreferencesManager(context)
@@ -64,9 +70,9 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
             settings.cameraId = CameraHelper(settings.cameraVersion).getAvailableCameras().find { it -> it.second == LensFacing.BACK }?.first
         }
 
-        if(settings.resolution == null && settings.cameraId != null) {
-            settings.availableResolutions = CameraHelper(settings.cameraVersion).getAvailableResolutions(settings.cameraId!!, settings.pictureFormat)
 
+        settings.availableResolutions = CameraHelper(settings.cameraVersion).getAvailableResolutions(settings.cameraId!!, settings.pictureFormat)
+        if(settings.resolution == null && settings.cameraId != null) {
             settings.resolution = settings.availableResolutions.maxBy { resolution -> resolution.height }
         }
 
