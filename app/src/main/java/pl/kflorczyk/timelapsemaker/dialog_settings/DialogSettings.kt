@@ -286,7 +286,7 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
 
     @TargetApi(Build.VERSION_CODES.LOLLIPOP)
     fun revealShow(dialogView: View, b: Boolean, dialog: Dialog?) {
-        val view = dialogView.findViewById(R.id.dialog);
+        val view = dialogView.findViewById(R.id.dialog)
 
         val w = view.width
         val h = view.height

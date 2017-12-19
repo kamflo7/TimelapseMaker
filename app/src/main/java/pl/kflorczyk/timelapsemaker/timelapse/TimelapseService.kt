@@ -80,12 +80,12 @@ class TimelapseService : Service() {
     override fun onDestroy() {
         super.onDestroy()
 
+        TimelapseController.stopTimelapse()
+
         worker!!.handler = null
         worker!!.quit()
         worker!!.interrupt()
         worker = null
-
-        TimelapseController.stopTimelapse()
     }
 
     override fun onLowMemory() {

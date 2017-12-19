@@ -34,6 +34,9 @@ class MainActivity : AppCompatActivity() {
         val BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES: String = "capturedPhotoBytes"
         val BROADCAST_MESSAGE_FAILED: String = "failedCapturing"
         val BROADCAST_MESSAGE_COMPLETE: String = "completeCapturing"
+        val BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS: String = "remoteEditSettings"
+        val BROADCAST_MESSAGE_REMOTE_START_TIMELAPSE: String = "remoteStartTimelapse"
+        val BROADCAST_MESSAGE_REMOTE_STOP_TIMELAPSE: String = "remoteStopTimelapse"
     }
 
     private lateinit var surfaceContainer: RelativeLayout
@@ -166,8 +169,9 @@ class MainActivity : AppCompatActivity() {
                 && TimelapseController.getState() == TimelapseController.State.TIMELAPSE) {
             startCountdownNextPhotoThread()
             updateUIStatistics()
-            btnStartTimelapse.setImageResource(R.drawable.record)
+            btnStartTimelapse.setImageResource(R.drawable.stop)
         } else {
+            btnStartTimelapse.setImageResource(R.drawable.record)
             startPreview()
         }
     }
@@ -207,7 +211,7 @@ class MainActivity : AppCompatActivity() {
                     TimelapseController.build(strategy, app.timelapseSettings!!)
 
                     try {
-                        TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder)
+                        TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder, this@MainActivity)
                     } catch(e: CameraNotAvailableException) {
                         Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
                         Util.log("camera not available exception")
@@ -282,6 +286,24 @@ class MainActivity : AppCompatActivity() {
                 }
                 BROADCAST_MESSAGE_COMPLETE -> {
                     Util.log("Broadcast received msg complete")
+                    onTimelapseCompleteOrFail()
+                }
+                BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS -> {
+                    if(intent?.getBooleanExtra("resolution", false) == true) {
+                        if(TimelapseController.getState() == TimelapseController.State.PREVIEW) {
+                            TimelapseController.stopPreview()
+                            startPreview()
+                        }
+                    }
+
+                    updateUIStatistics()
+                }
+                BROADCAST_MESSAGE_REMOTE_START_TIMELAPSE -> {
+                    btnStartTimelapse.setImageResource(R.drawable.stop)
+                    startCountdownNextPhotoThread()
+                    updateUIStatistics()
+                }
+                BROADCAST_MESSAGE_REMOTE_STOP_TIMELAPSE -> {
                     onTimelapseCompleteOrFail()
                 }
             }

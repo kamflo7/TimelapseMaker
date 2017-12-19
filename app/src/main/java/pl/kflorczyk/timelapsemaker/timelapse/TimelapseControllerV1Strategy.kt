@@ -12,12 +12,12 @@ class TimelapseControllerV1Strategy : TimelapseControllerStrategy {
     private var camera: CameraV1? = null
     private lateinit var listener: OnTimelapseStateChangeListener
 
-    override fun startPreview(timelapseSettings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
+    override fun startPreview(timelapseSettings: TimelapseSettings, surfaceHolder: SurfaceHolder, context:Context) {
         camera = CameraV1()
         surfaceHolder.setFixedSize(timelapseSettings.resolution!!.width, timelapseSettings.resolution!!.height)
 
         try {
-            camera!!.openForPreview(surfaceHolder)
+            camera!!.openForPreview(surfaceHolder,context)
         } catch(e: CameraNotAvailableException) {
             throw e
         }

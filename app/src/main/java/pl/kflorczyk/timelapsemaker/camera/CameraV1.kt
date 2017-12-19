@@ -1,11 +1,18 @@
 package pl.kflorczyk.timelapsemaker.camera
 
 import android.content.Context
+import android.graphics.ImageFormat
+import android.graphics.Rect
 import android.graphics.SurfaceTexture
+import android.graphics.YuvImage
 import android.hardware.Camera
+import android.util.Base64
 import android.view.SurfaceHolder
 import pl.kflorczyk.timelapsemaker.MyApplication
+import pl.kflorczyk.timelapsemaker.StorageManager
+import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
+import java.io.ByteArrayOutputStream
 import java.io.IOException
 
 /**
@@ -16,7 +23,7 @@ class CameraV1 {
     private var camera: Camera? = null
     private lateinit var dummySurface: SurfaceTexture
 
-    fun openForPreview(surfaceHolder: SurfaceHolder) {
+    fun openForPreview(surfaceHolder: SurfaceHolder, context: Context) {
         camera = getCameraInstance() ?: throw CameraNotAvailableException("")
 
         camera!!.setPreviewDisplay(surfaceHolder)

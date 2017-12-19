@@ -85,11 +85,11 @@ object TimelapseController {
         }, context)
     }
 
-    fun startPreviewing(settings: TimelapseSettings, surfaceHolder: SurfaceHolder) {
+    fun startPreviewing(settings: TimelapseSettings, surfaceHolder: SurfaceHolder, context:Context) {
         if(strategy == null) throw RuntimeException("TimelapseControllerStrategy is null")
 
         try {
-            strategy?.startPreview(settings, surfaceHolder)
+            strategy?.startPreview(settings, surfaceHolder, context)
         } catch(e: CameraNotAvailableException) {
             throw e
         }
