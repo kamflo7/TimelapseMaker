@@ -30,19 +30,18 @@ import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
 import java.util.*
 
 class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettingChangeListener: OnDialogSettingChangeListener) {
-    val context: Context
-    val fab: FloatingActionButton
-    val timelapseSettings: TimelapseSettings
-    var onDialogSettingChangeListener: OnDialogSettingChangeListener? = null
+    val context: Context = context
+    val fab: FloatingActionButton = fab
+    val timelapseSettings: TimelapseSettings = ((context as Activity).application as MyApplication).timelapseSettings!!
+    var onDialogSettingChangeListener: OnDialogSettingChangeListener = onDialogSettingChangeListener
 
-    init {
-        this.context = context
-        this.fab = fab
-        this.timelapseSettings = ((context as Activity).application as MyApplication).timelapseSettings!!
-        this.onDialogSettingChangeListener = onDialogSettingChangeListener
+    enum class SettingsCategory {
+        PAGE_MAIN,
+        PAGE_REMOTE
     }
 
-
+    private var currentCategoryPage: SettingsCategory = SettingsCategory.PAGE_MAIN
+    private lateinit var dialogCategoryTitle: TextView
 
     fun show() {
         val dialogView = View.inflate(context, R.layout.dialog_settings, null)
@@ -52,8 +51,30 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
         dialog.show()
 
         val listView = dialogView.findViewById(R.id.optionsList) as ListView
-        setListViewClickListenerForBasicCategory(listView)
+        setListViewContentForPageMain(listView)
 
+        dialogCategoryTitle = dialogView.findViewById(R.id.dialog_category_title) as TextView
+
+        val btnCategoryMain: ImageButton = dialogView.findViewById(R.id.btnCategoryMain) as ImageButton
+        val btnCategoryRemote: ImageButton = dialogView.findViewById(R.id.btnCategoryRemote) as ImageButton
+        btnCategoryMain.setOnClickListener { _ ->
+            if(currentCategoryPage != SettingsCategory.PAGE_MAIN) {
+                setListViewContentForPageMain(listView)
+                currentCategoryPage = SettingsCategory.PAGE_MAIN
+                dialogCategoryTitle.setText(R.string.dialog_category_main)
+
+                setCategorySwitchBackground(btnCategoryMain, btnCategoryRemote)
+            }
+        }
+        btnCategoryRemote.setOnClickListener { _ ->
+            if(currentCategoryPage != SettingsCategory.PAGE_REMOTE) {
+                setListViewContentForPageRemote(listView)
+                currentCategoryPage = SettingsCategory.PAGE_REMOTE
+                dialogCategoryTitle.setText(R.string.dialog_category_remote)
+
+                setCategorySwitchBackground(btnCategoryRemote, btnCategoryMain)
+            }
+        }
 
         dialog.setOnShowListener {
             revealShow(dialogView, true, null)
@@ -68,6 +89,11 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
         });
 
         dialog.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+    }
+
+    private fun setCategorySwitchBackground(newCategory: ImageButton, oldCategory: ImageButton) {
+        newCategory.setBackgroundColor(0xCC_2F_2E_30.toInt())
+        oldCategory.setBackgroundColor(0x00_2F_2E_30)
     }
 
     fun getAspectRatioString(width: Int, height: Int): String {
@@ -91,9 +117,26 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
     fun getCameraApiDescription(): String = if(timelapseSettings.cameraVersion == CameraVersionAPI.V_1) "v1" else "v2"
     fun getStorageDescription(): String = if(timelapseSettings.storageType == StorageManager.StorageType.EXTERNAL_EMULATED) "External Emulated" else "Physic SD Card"
 
-    private fun setListViewClickListenerForBasicCategory(listView: ListView) {
+    private fun setListViewContentForPageRemote(listView: ListView) {
         val options = ArrayList<DialogOption>()
-        options.add(DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()));
+
+        options.add(DialogOption(R.drawable.ic_remote, "Bluetooth", "xDDD"))
+
+        listView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
+            when(position) {
+                0 -> {
+                    Toast.makeText(this@DialogSettings.context, "Tu beda ustawienia Bluetooth", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+
+        val dialogSettingsAdapter = DialogSettingsAdapter(this@DialogSettings.context, options)
+        listView.adapter = dialogSettingsAdapter
+    }
+
+    private fun setListViewContentForPageMain(listView: ListView) {
+        val options = ArrayList<DialogOption>()
+        options.add(DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()))
         options.add(DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()))
         options.add(DialogOption(R.drawable.ic_amount, "Limit", getPhotosLimitDescription()))
         options.add(DialogOption(R.drawable.ic_camera, "Camera API", getCameraApiDescription()))

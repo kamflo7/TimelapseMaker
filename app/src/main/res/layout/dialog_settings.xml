@@ -16,13 +16,26 @@
         <ImageButton
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@null"
-            android:src="@drawable/ic_settings"
+            android:background="#cc2f2e30"
+            android:src="@drawable/ic_camera"
             android:scaleType="fitXY"
             android:adjustViewBounds="true"
-
+            android:padding="5dp"
+            android:id="@+id/btnCategoryMain"
             />
-
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="10dp"/>
+        <ImageButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:src="@drawable/ic_remote"
+            android:scaleType="fitXY"
+            android:adjustViewBounds="true"
+            android:padding="5dp"
+            android:id="@+id/btnCategoryRemote"
+            />
     </LinearLayout>
     <View
         android:background="#ffcb00"
@@ -45,6 +58,7 @@
             android:layout_centerVertical="true"
             android:textColor="#040000"
             android:layout_marginLeft="5dp"
+            android:id="@+id/dialog_category_title"
             />
     </RelativeLayout>
 
