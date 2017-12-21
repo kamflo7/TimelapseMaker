@@ -18,17 +18,17 @@ class BluetoothService: Service() {
 
     private var worker: WorkerThread? = null
 
-
     override fun onCreate() {
         super.onCreate()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Util.log("BluetoothService::onStartCommand!")
         var btAdapter = BluetoothAdapter.getDefaultAdapter()
         var serverSocket: BluetoothServerSocket? = null
 
         try {
-            serverSocket = btAdapter.listenUsingRfcommWithServiceRecord("BTServer", UUID.randomUUID())
+            serverSocket = btAdapter.listenUsingRfcommWithServiceRecord("BTServer", BluetoothManager.uuid)
         } catch(e: IOException) {
             e.printStackTrace()
             stopSelf()
@@ -47,7 +47,6 @@ class BluetoothService: Service() {
                 }
 
                 Util.log("[BT] POLACZONO Z: $socket")
-
             }
         }
 

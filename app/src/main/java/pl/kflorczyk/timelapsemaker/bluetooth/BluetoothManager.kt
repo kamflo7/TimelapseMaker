@@ -6,11 +6,18 @@ import android.content.Intent
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothSocket
+import java.io.IOException
+import java.util.*
 
 /**
  * Created by Kamil on 2017-12-20.
  */
 class BluetoothManager(activity: Activity) {
+    companion object {
+        val uuid:UUID = UUID.fromString("b30eec59-135e-4cd7-b6f1-bf126261ed3f")
+    }
+
     private var activity: Activity = activity
     private lateinit var listener: OnBluetoothStateChangeListener
 
@@ -26,6 +33,34 @@ class BluetoothManager(activity: Activity) {
         val device: BluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE) as BluetoothDevice
         val deviceName = device.name
         val deviceHardwareAddress = device.address
+
+        if(deviceName == "Galaxy S2 Plus") {
+            Util.log("Znalazlem S2 Plus, probujemy sie podlaczyc")
+            BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
+
+            var socket: BluetoothSocket? = null
+
+            try {
+                socket = device.createRfcommSocketToServiceRecord(uuid)
+            } catch(e: IOException) {
+                Util.log("device.createRfcommSocket")
+                e.printStackTrace()
+            }
+
+            if(socket != null) {
+                var r = Runnable {
+                    try {
+                        socket.connect()
+                        Util.log("Chyba sie udalo podlaczyc do serwera")
+                    } catch(e: IOException) {
+                        Util.log("socket.connect")
+                        e.printStackTrace()
+                    }
+                }
+
+                Thread(r).start()
+            }
+        }
 
         devices += device
     }
