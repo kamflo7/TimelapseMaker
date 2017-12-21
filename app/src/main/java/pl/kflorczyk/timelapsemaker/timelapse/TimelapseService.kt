@@ -69,7 +69,7 @@ class TimelapseService : Service() {
             }
         }
 
-        worker = WorkerThread("ServiceThread")
+        worker = WorkerThread("TimelapseServiceThread")
         worker!!.start()
         worker!!.waitUntilReady()
         worker!!.handler!!.post(runnable)

@@ -19,21 +19,23 @@ import android.view.View
 import android.view.ViewAnimationUtils
 import android.view.Window
 import android.widget.*
-import pl.kflorczyk.timelapsemaker.MyApplication
-import pl.kflorczyk.timelapsemaker.R
-import pl.kflorczyk.timelapsemaker.StorageManager
-import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.app_settings.SharedPreferencesManager
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
 import java.util.*
+import pl.kflorczyk.timelapsemaker.*
+import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothManager
 
-class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettingChangeListener: OnDialogSettingChangeListener) {
-    val context: Context = context
-    val fab: FloatingActionButton = fab
-    val timelapseSettings: TimelapseSettings = ((context as Activity).application as MyApplication).timelapseSettings!!
-    var onDialogSettingChangeListener: OnDialogSettingChangeListener = onDialogSettingChangeListener
+
+class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSettingChangeListener: OnDialogSettingChangeListener) {
+    private val context: Context = acitvity
+    private val activity: Activity = acitvity
+    private val fab: FloatingActionButton = fab
+    private val timelapseSettings: TimelapseSettings = ((context as Activity).application as MyApplication).timelapseSettings!!
+    private var onDialogSettingChangeListener: OnDialogSettingChangeListener = onDialogSettingChangeListener
+
+    private var bluetoothManager: BluetoothManager? = null
 
     enum class SettingsCategory {
         PAGE_MAIN,
@@ -42,6 +44,8 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
 
     private var currentCategoryPage: SettingsCategory = SettingsCategory.PAGE_MAIN
     private lateinit var dialogCategoryTitle: TextView
+
+    fun getBluetoothManager(): BluetoothManager? = bluetoothManager
 
     fun show() {
         val dialogView = View.inflate(context, R.layout.dialog_settings, null)
@@ -120,7 +124,52 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
     private fun setListViewContentForPageRemote(listView: ListView) {
         val options = ArrayList<DialogOption>()
 
-        options.add(DialogOption(R.drawable.ic_remote, "Bluetooth", "xDDD"))
+        val adapter = DialogSettingsAdapter(this@DialogSettings.context, options)
+        listView.adapter = adapter
+
+        options.add(DialogOption(R.drawable.ic_remote, "Bluetooth Server",
+                "Shoot timelapse with multiple devices simultaneously",
+                DialogOption.Switch.DISABLED, CompoundButton.OnCheckedChangeListener { _, b ->
+            //todo: this ^ above "DISABLED" should be obtained from some variable
+            if(b) {
+                bluetoothManager = BluetoothManager(this.activity)
+                var bluetoothAvailable = bluetoothManager!!.enableBluetooth(object : BluetoothManager.OnBluetoothStateChangeListener {
+                    override fun onBluetoothEnable(enabled: Boolean) {
+                        if(!enabled) {
+                            options[0].switchState = DialogOption.Switch.DISABLED
+                            adapter.notifyDataSetChanged()
+                            Toast.makeText(this@DialogSettings.context, "You have to enable bluetooth to use this function", Toast.LENGTH_LONG).show()
+                        } else {
+                            Toast.makeText(this@DialogSettings.context, "Ok, spoko", Toast.LENGTH_LONG).show()
+                            bluetoothManager!!.enableDiscoverability()
+                            bluetoothManager!!.startBluetoothServiceServer()
+                        }
+                    }
+                })
+
+                if(!bluetoothAvailable) {
+                    Toast.makeText(this@DialogSettings.context, "Sorry, your device has not Bluetooth", Toast.LENGTH_LONG).show()
+                }
+            } else {
+
+            }
+        }))
+        options.add(DialogOption(R.drawable.ic_help, "Connect to Bluetooth Server", "Find the nearby Bluetooth Server and connect to it",
+                DialogOption.Switch.DISABLED, CompoundButton.OnCheckedChangeListener { _, b ->
+            //todo: this ^ above "DISABLED" should be obtained from some variable
+            if(b) {
+                bluetoothManager = BluetoothManager(this.activity)
+                bluetoothManager!!.enableBluetooth(object : BluetoothManager.OnBluetoothStateChangeListener {
+                    override fun onBluetoothEnable(enabled: Boolean) {
+                        if(!enabled) {
+
+                        } else {
+                            bluetoothManager!!.startDiscovering()
+                        }
+                    }
+                })
+            }
+        }))
 
         listView.onItemClickListener = AdapterView.OnItemClickListener { _, _, position, _ ->
             when(position) {
@@ -129,9 +178,6 @@ class DialogSettings(context: Context, fab: FloatingActionButton, onDialogSettin
                 }
             }
         }
-
-        val dialogSettingsAdapter = DialogSettingsAdapter(this@DialogSettings.context, options)
-        listView.adapter = dialogSettingsAdapter
     }
 
     private fun setListViewContentForPageMain(listView: ListView) {

@@ -1,5 +1,7 @@
 package pl.kflorczyk.timelapsemaker
 
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -37,6 +39,8 @@ class MainActivity : AppCompatActivity() {
         val BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS: String = "remoteEditSettings"
         val BROADCAST_MESSAGE_REMOTE_START_TIMELAPSE: String = "remoteStartTimelapse"
         val BROADCAST_MESSAGE_REMOTE_STOP_TIMELAPSE: String = "remoteStopTimelapse"
+
+        val ACTIVITY_RESULT_BT_ENABLE: Int = 1
     }
 
     private lateinit var surfaceContainer: RelativeLayout
@@ -48,6 +52,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var intervalTxtContent: TextView
     private lateinit var photosCapturedTxtContent: TextView
     private lateinit var nextCaptureTxtContent: TextView
+
+    private var dialogSettings: DialogSettings? = null
 
     private var surfaceCamera: SurfaceView? = null
 
@@ -120,7 +126,7 @@ class MainActivity : AppCompatActivity() {
             TimelapseController.stopPreview()
         }
 
-        var dialogSettings = DialogSettings(this, fabSettings, object : DialogSettings.OnDialogSettingChangeListener {
+        dialogSettings = DialogSettings(this, fabSettings, object : DialogSettings.OnDialogSettingChangeListener {
             override fun onChangePhotoResolution(resolution: Resolution) = updateUIStatistics()
             override fun onChangeInterval(intervalMiliseconds: Int) = updateUIStatistics()
             override fun onChangePhotosLimit(amount: Int) = updateUIStatistics()
@@ -141,12 +147,18 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-        dialogSettings.show()
+        dialogSettings!!.show()
     }
 
     override fun onStart() {
         super.onStart()
         LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(BROADCAST_FILTER))
+
+        val btDSCVR = IntentFilter()
+        btDSCVR.addAction(BluetoothDevice.ACTION_FOUND)
+        btDSCVR.addAction(BluetoothAdapter.ACTION_DISCOVERY_STARTED)
+        btDSCVR.addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+        registerReceiver(mMessageBluetoothReceiver, btDSCVR)
 
         if(app.timelapseSettings!!.webEnabled && !Util.isMyServiceRunning(HttpService::class.java, this)) {
             startService(Intent(this, HttpService::class.java))
@@ -156,6 +168,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
         LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
+        unregisterReceiver(mMessageBluetoothReceiver)
 
         if(TimelapseController.getState() != TimelapseController.State.TIMELAPSE) {
             stopService(Intent(this, HttpService::class.java))
@@ -245,6 +258,17 @@ class MainActivity : AppCompatActivity() {
         nextCaptureTxtContent.text = nextCapture
     }
 
+    private var mMessageBluetoothReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if(intent == null) return
+
+            when(intent.action) {
+                // [BluetoothManager] BluetoothAdapter::startDiscovery requires BroadcastReceiver to give the result
+                BluetoothDevice.ACTION_FOUND -> dialogSettings!!.getBluetoothManager()!!.passDiscoverDevice(intent)
+            }
+        }
+    }
+
     private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             var msg = intent?.getStringExtra(BROADCAST_MSG)
@@ -307,6 +331,14 @@ class MainActivity : AppCompatActivity() {
                     onTimelapseCompleteOrFail()
                 }
             }
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        when(requestCode) {
+            // BluetoothManager.enableBluetooth requires Activity::onActivityResult to give the result
+            // so this piece of code is unfortunately required, it's impossible to do this without Activity
+            ACTIVITY_RESULT_BT_ENABLE -> dialogSettings?.getBluetoothManager()?.passActivityResult(requestCode, resultCode)
         }
     }
 
