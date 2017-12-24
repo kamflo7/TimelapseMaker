@@ -5,6 +5,7 @@ import android.animation.AnimatorListenerAdapter
 import android.annotation.TargetApi
 import android.app.Activity
 import android.app.Dialog
+import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.DialogInterface
 import android.graphics.Color
@@ -23,9 +24,9 @@ import pl.kflorczyk.timelapsemaker.app_settings.SharedPreferencesManager
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
-import java.util.*
 import pl.kflorczyk.timelapsemaker.*
 import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothManager
+import kotlin.collections.ArrayList
 
 
 class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSettingChangeListener: OnDialogSettingChangeListener) {
@@ -35,11 +36,19 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
     private val timelapseSettings: TimelapseSettings = ((context as Activity).application as MyApplication).timelapseSettings!!
     private var onDialogSettingChangeListener: OnDialogSettingChangeListener = onDialogSettingChangeListener
 
+
+    private lateinit var btnCategoryMain: ImageButton
+    private lateinit var btnCategoryRemote: ImageButton
+    private lateinit var btnCategoryBt: ImageButton
+
     private var bluetoothManager: BluetoothManager? = null
+
+    private lateinit var listView: ListView
 
     enum class SettingsCategory {
         PAGE_MAIN,
-        PAGE_REMOTE
+        PAGE_REMOTE,
+        PAGE_NESTED_REMOTE
     }
 
     private var currentCategoryPage: SettingsCategory = SettingsCategory.PAGE_MAIN
@@ -54,27 +63,32 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
         dialog.setContentView(dialogView)
         dialog.show()
 
-        val listView = dialogView.findViewById(R.id.optionsList) as ListView
-        setListViewContentForPageMain(listView)
+        listView = dialogView.findViewById(R.id.optionsList) as ListView
+        setListViewContentForPageMain()
 
         dialogCategoryTitle = dialogView.findViewById(R.id.dialog_category_title) as TextView
 
-        val btnCategoryMain: ImageButton = dialogView.findViewById(R.id.btnCategoryMain) as ImageButton
-        val btnCategoryRemote: ImageButton = dialogView.findViewById(R.id.btnCategoryRemote) as ImageButton
+        btnCategoryMain = dialogView.findViewById(R.id.btnCategoryMain) as ImageButton
+        btnCategoryRemote = dialogView.findViewById(R.id.btnCategoryRemote) as ImageButton
+        btnCategoryBt = dialogView.findViewById(R.id.btnCategoryBt) as ImageButton
+
+        btnCategoryBt.visibility = View.INVISIBLE
         btnCategoryMain.setOnClickListener { _ ->
             if(currentCategoryPage != SettingsCategory.PAGE_MAIN) {
-                setListViewContentForPageMain(listView)
+                setListViewContentForPageMain()
                 currentCategoryPage = SettingsCategory.PAGE_MAIN
                 dialogCategoryTitle.setText(R.string.dialog_category_main)
+                btnCategoryBt.visibility = View.INVISIBLE
 
                 setCategorySwitchBackground(btnCategoryMain, btnCategoryRemote)
             }
         }
         btnCategoryRemote.setOnClickListener { _ ->
             if(currentCategoryPage != SettingsCategory.PAGE_REMOTE) {
-                setListViewContentForPageRemote(listView)
+                setListViewContentForPageRemote()
                 currentCategoryPage = SettingsCategory.PAGE_REMOTE
                 dialogCategoryTitle.setText(R.string.dialog_category_remote)
+                btnCategoryBt.visibility = View.INVISIBLE
 
                 setCategorySwitchBackground(btnCategoryRemote, btnCategoryMain)
             }
@@ -90,13 +104,16 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
                 return@OnKeyListener true
             }
             false
-        });
+        })
 
         dialog.window.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
     }
 
     private fun setCategorySwitchBackground(newCategory: ImageButton, oldCategory: ImageButton) {
-        newCategory.setBackgroundColor(0xCC_2F_2E_30.toInt())
+        if(this.currentCategoryPage != SettingsCategory.PAGE_NESTED_REMOTE)
+            newCategory.setBackgroundColor(0xCC_2F_2E_30.toInt())
+        else
+            newCategory.setBackgroundColor(0xCC_54_00_FF.toInt())
         oldCategory.setBackgroundColor(0x00_2F_2E_30)
     }
 
@@ -121,7 +138,7 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
     fun getCameraApiDescription(): String = if(timelapseSettings.cameraVersion == CameraVersionAPI.V_1) "v1" else "v2"
     fun getStorageDescription(): String = if(timelapseSettings.storageType == StorageManager.StorageType.EXTERNAL_EMULATED) "External Emulated" else "Physic SD Card"
 
-    private fun setListViewContentForPageRemote(listView: ListView) {
+    private fun setListViewContentForPageRemote() {
         val options = ArrayList<DialogOption>()
 
         val adapter = DialogSettingsAdapter(this@DialogSettings.context, options)
@@ -164,7 +181,17 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
                         if(!enabled) {
 
                         } else {
-                            bluetoothManager!!.startDiscovering()
+                            currentCategoryPage = SettingsCategory.PAGE_NESTED_REMOTE
+                            devices = ArrayList()
+                            setListViewContentForPageNestedRemote()
+
+                            bluetoothManager!!.startDiscovering(object : BluetoothManager.OnDiscoveringStateChangeListener {
+                                override fun onDiscoverDevice(device: BluetoothDevice) {
+                                    (devices as ArrayList).add(device)
+                                    setListViewContentForPageNestedRemote()
+                                }
+
+                            })
                         }
                     }
                 })
@@ -176,11 +203,38 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
                 0 -> {
                     Toast.makeText(this@DialogSettings.context, "Tu beda ustawienia Bluetooth", Toast.LENGTH_LONG).show()
                 }
+                1 -> {
+                    setListViewContentForPageNestedRemote()
+                }
             }
         }
     }
 
-    private fun setListViewContentForPageMain(listView: ListView) {
+    private var devices: List<BluetoothDevice> = ArrayList()
+
+    private fun setListViewContentForPageNestedRemote() {
+        var old: ImageButton = if(currentCategoryPage == SettingsCategory.PAGE_REMOTE) btnCategoryRemote else btnCategoryMain
+
+        this.btnCategoryBt.visibility = View.VISIBLE
+        this.currentCategoryPage = SettingsCategory.PAGE_NESTED_REMOTE
+        setCategorySwitchBackground(btnCategoryBt, old)
+
+        val options = ArrayList<DialogOption>()
+
+        for (device in devices) {
+            options.add(DialogOption(R.drawable.ic_remote, device.name, "", DialogOption.Switch.NOT_EXIST, null))
+        }
+
+        val adapter = DialogSettingsAdapter(this@DialogSettings.context, options)
+        listView.adapter = adapter
+
+        listView.onItemClickListener = AdapterView.OnItemClickListener { adapterView, view, position, id ->
+            bluetoothManager!!.connectToServer(position)
+            Toast.makeText(this@DialogSettings.context, "Connecting to ${devices[position].name}..", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    private fun setListViewContentForPageMain() {
         val options = ArrayList<DialogOption>()
         options.add(DialogOption(R.drawable.ic_photo_size_select, "Photo resolution", getPhotoResolutionDescription()))
         options.add(DialogOption(R.drawable.ic_interval, "Interval", getIntervalDescription()))

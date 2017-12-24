@@ -36,6 +36,19 @@
             android:padding="5dp"
             android:id="@+id/btnCategoryRemote"
             />
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="10dp"/>
+        <ImageButton
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@null"
+            android:src="@drawable/icon_bt"
+            android:scaleType="fitXY"
+            android:adjustViewBounds="true"
+            android:padding="5dp"
+            android:id="@+id/btnCategoryBt"
+            />
     </LinearLayout>
     <View
         android:background="#ffcb00"

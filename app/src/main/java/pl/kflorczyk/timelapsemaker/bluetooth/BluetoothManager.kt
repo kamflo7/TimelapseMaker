@@ -20,6 +20,7 @@ class BluetoothManager(activity: Activity) {
 
     private var activity: Activity = activity
     private lateinit var listener: OnBluetoothStateChangeListener
+    private var discoverListener: OnDiscoveringStateChangeListener? = null
 
     private var devices: List<BluetoothDevice> = ArrayList<BluetoothDevice>()
 
@@ -29,40 +30,62 @@ class BluetoothManager(activity: Activity) {
         }
     }
 
+    fun getDiscoveredDevices(): List<BluetoothDevice> = devices
+
     fun passDiscoverDevice(intent: Intent) {
         val device: BluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE) as BluetoothDevice
         val deviceName = device.name
         val deviceHardwareAddress = device.address
 
-        if(deviceName == "Galaxy S2 Plus") {
-            Util.log("Znalazlem S2 Plus, probujemy sie podlaczyc")
-            BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
+        discoverListener?.onDiscoverDevice(device)
 
-            var socket: BluetoothSocket? = null
-
-            try {
-                socket = device.createRfcommSocketToServiceRecord(uuid)
-            } catch(e: IOException) {
-                Util.log("device.createRfcommSocket")
-                e.printStackTrace()
-            }
-
-            if(socket != null) {
-                var r = Runnable {
-                    try {
-                        socket.connect()
-                        Util.log("Chyba sie udalo podlaczyc do serwera")
-                    } catch(e: IOException) {
-                        Util.log("socket.connect")
-                        e.printStackTrace()
-                    }
-                }
-
-                Thread(r).start()
-            }
-        }
+//        if(deviceName == "Galaxy S2 Plus") {
+//            Util.log("Znalazlem S2 Plus, probujemy sie podlaczyc")
+//            BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
+//
+//            var socket: BluetoothSocket? = null
+//
+//            try {
+//                socket = device.createRfcommSocketToServiceRecord(uuid)
+//            } catch(e: IOException) {
+//                Util.log("device.createRfcommSocket")
+//                e.printStackTrace()
+//            }
+//
+//            if(socket != null) {
+//                var r = Runnable {
+//                    try {
+//                        socket.connect()
+//                        Util.log("Chyba sie udalo podlaczyc do serwera")
+//                    } catch(e: IOException) {
+//                        Util.log("socket.connect")
+//                        e.printStackTrace()
+//                    }
+//                }
+//
+//                Thread(r).start()
+//            }
+//        }
 
         devices += device
+    }
+
+    fun connectToServer(indexPosition: Int) {
+        if(indexPosition >= devices.size) throw RuntimeException("Invalid index")
+
+        BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
+        var btDevice = devices[indexPosition]
+        var socket: BluetoothSocket? = null
+
+        try {
+            socket = btDevice.createRfcommSocketToServiceRecord(uuid)
+        } catch(e: IOException) {
+            e.printStackTrace()
+        }
+
+        if(socket != null) {
+            
+        }
     }
 
     /**
@@ -99,7 +122,8 @@ class BluetoothManager(activity: Activity) {
         activity.startService(Intent(activity, BluetoothService::class.java))
     }
 
-    fun startDiscovering() {
+    fun startDiscovering(listener: OnDiscoveringStateChangeListener) {
+        this.discoverListener = listener
         devices = ArrayList<BluetoothDevice>()
 
         val defaultAdapter = BluetoothAdapter.getDefaultAdapter()
@@ -122,6 +146,10 @@ class BluetoothManager(activity: Activity) {
                 Util.log("[PairedDevice] $deviceName; $deviceHardwareAddress")
             }
         }
+    }
+
+    interface OnDiscoveringStateChangeListener {
+        fun onDiscoverDevice(device: BluetoothDevice)
     }
 
     interface OnBluetoothStateChangeListener {
