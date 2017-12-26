@@ -34,39 +34,8 @@ class BluetoothManager(activity: Activity) {
 
     fun passDiscoverDevice(intent: Intent) {
         val device: BluetoothDevice = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE) as BluetoothDevice
-        val deviceName = device.name
-        val deviceHardwareAddress = device.address
 
         discoverListener?.onDiscoverDevice(device)
-
-//        if(deviceName == "Galaxy S2 Plus") {
-//            Util.log("Znalazlem S2 Plus, probujemy sie podlaczyc")
-//            BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
-//
-//            var socket: BluetoothSocket? = null
-//
-//            try {
-//                socket = device.createRfcommSocketToServiceRecord(uuid)
-//            } catch(e: IOException) {
-//                Util.log("device.createRfcommSocket")
-//                e.printStackTrace()
-//            }
-//
-//            if(socket != null) {
-//                var r = Runnable {
-//                    try {
-//                        socket.connect()
-//                        Util.log("Chyba sie udalo podlaczyc do serwera")
-//                    } catch(e: IOException) {
-//                        Util.log("socket.connect")
-//                        e.printStackTrace()
-//                    }
-//                }
-//
-//                Thread(r).start()
-//            }
-//        }
-
         devices += device
     }
 
@@ -75,17 +44,13 @@ class BluetoothManager(activity: Activity) {
 
         BluetoothAdapter.getDefaultAdapter().cancelDiscovery()
         var btDevice = devices[indexPosition]
-        var socket: BluetoothSocket? = null
 
-        try {
-            socket = btDevice.createRfcommSocketToServiceRecord(uuid)
-        } catch(e: IOException) {
-            e.printStackTrace()
-        }
+        if(!Util.isMyServiceRunning(BluetoothClientService::class.java, activity))
+            activity.stopService(Intent(activity, BluetoothClientService::class.java))
 
-        if(socket != null) {
-            
-        }
+        val intent = Intent(activity, BluetoothClientService::class.java)
+        intent.putExtra("btDevice", btDevice)
+        activity.startService(intent)
     }
 
     /**
@@ -115,11 +80,11 @@ class BluetoothManager(activity: Activity) {
     }
 
     fun startBluetoothServiceServer() {
-        if(Util.isMyServiceRunning(BluetoothService::class.java, activity)) {
-            activity.stopService(Intent(activity, BluetoothService::class.java))
+        if(Util.isMyServiceRunning(BluetoothServerService::class.java, activity)) {
+            activity.stopService(Intent(activity, BluetoothServerService::class.java))
         }
 
-        activity.startService(Intent(activity, BluetoothService::class.java))
+        activity.startService(Intent(activity, BluetoothServerService::class.java))
     }
 
     fun startDiscovering(listener: OnDiscoveringStateChangeListener) {
@@ -132,7 +97,7 @@ class BluetoothManager(activity: Activity) {
             defaultAdapter.cancelDiscovery()
         }
 
-        val startDiscovery = defaultAdapter.startDiscovery()
+        defaultAdapter.startDiscovery()
     }
 
     fun getBondedDevices() {

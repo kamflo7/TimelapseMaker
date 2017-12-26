@@ -23,7 +23,7 @@ class TimelapseService : Service() {
         val storageType = (application as MyApplication).timelapseSettings!!.storageType
         storageManager = StorageManager(storageType, applicationContext)
         if(!storageManager!!.createTimelapseDirectory()) {
-            val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
+            val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_FAILED)
             LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
             Util.log("[TimelapseService] Problem with creating directory")
             this@TimelapseService.stopSelf()
@@ -33,8 +33,8 @@ class TimelapseService : Service() {
         var runnable = Runnable {
             var listener = object : TimelapseController.OnTimelapseProgressListener {
                 override fun onCapture(bytes: ByteArray?) {
-                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO)
-                    i.putExtra(MainActivity.BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES, bytes)
+                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_CAPTURED_PHOTO)
+                    i.putExtra(MainActivity.BROADCAST_MSG_CAPTURED_PHOTO_BYTES, bytes)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
 
                     if(bytes != null) {
@@ -45,13 +45,13 @@ class TimelapseService : Service() {
                 }
 
                 override fun onFail(msg: String?) {
-                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
+                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_FAILED)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                     this@TimelapseService.stopSelf()
                 }
 
                 override fun onComplete() {
-                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_COMPLETE)
+                    val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_COMPLETE)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                     this@TimelapseService.stopSelf()
                     Util.log("TimelapseService::onComplete -> should correctly stop all things")
@@ -61,7 +61,7 @@ class TimelapseService : Service() {
             try {
                 TimelapseController.startTimelapse(listener, this@TimelapseService.applicationContext)
             } catch(e: RuntimeException) {
-                val i = getSendingMessageIntent(MainActivity.BROADCAST_MESSAGE_FAILED)
+                val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_FAILED)
                 LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
 
                 this@TimelapseService.stopSelf()

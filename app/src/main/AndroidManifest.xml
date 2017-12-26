@@ -37,7 +37,9 @@
 
         <service android:name=".timelapse.TimelapseService" />
         <service android:name=".http_server.HttpService" />
-        <service android:name=".bluetooth.BluetoothService" />
+        <service android:name=".bluetooth.BluetoothServerService" />
+        <service android:name=".bluetooth.BluetoothClientService" />
+
         <!--<activity android:namMainActivityvity"></activity>-->
     </application>
 

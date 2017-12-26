@@ -26,19 +26,20 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import pl.kflorczyk.timelapsemaker.bluetooth.messages.MessageCaptureProgress
 import pl.kflorczyk.timelapsemaker.http_server.HttpService
 
 class MainActivity : AppCompatActivity() {
     companion object {
         val BROADCAST_FILTER = "pl.kflorczyk.timelapsemaker.timelapse.TimelapseService"
         var BROADCAST_MSG: String = "action"
-        val BROADCAST_MESSAGE_CAPTURED_PHOTO: String = "capturedPhoto"
-        val BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES: String = "capturedPhotoBytes"
-        val BROADCAST_MESSAGE_FAILED: String = "failedCapturing"
-        val BROADCAST_MESSAGE_COMPLETE: String = "completeCapturing"
-        val BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS: String = "remoteEditSettings"
-        val BROADCAST_MESSAGE_REMOTE_START_TIMELAPSE: String = "remoteStartTimelapse"
-        val BROADCAST_MESSAGE_REMOTE_STOP_TIMELAPSE: String = "remoteStopTimelapse"
+        val BROADCAST_MSG_CAPTURED_PHOTO: String = "capturedPhoto"
+        val BROADCAST_MSG_CAPTURED_PHOTO_BYTES: String = "capturedPhotoBytes"
+        val BROADCAST_MSG_FAILED: String = "failedCapturing"
+        val BROADCAST_MSG_COMPLETE: String = "completeCapturing"
+        val BROADCAST_MSG_REMOTE_EDIT_SETTINGS: String = "remoteEditSettings"
+        val BROADCAST_MSG_REMOTE_START_TIMELAPSE: String = "remoteStartTimelapse"
+        val BROADCAST_MSG_REMOTE_STOP_TIMELAPSE: String = "remoteStopTimelapse"
 
         val ACTIVITY_RESULT_BT_ENABLE: Int = 1
     }
@@ -173,6 +174,8 @@ class MainActivity : AppCompatActivity() {
         if(TimelapseController.getState() != TimelapseController.State.TIMELAPSE) {
             stopService(Intent(this, HttpService::class.java))
         }
+
+        Util.log("MainActivity:: ON STOP")
     }
 
     override fun onResume() {
@@ -274,9 +277,13 @@ class MainActivity : AppCompatActivity() {
             var msg = intent?.getStringExtra(BROADCAST_MSG)
 
             when(msg) {
-                BROADCAST_MESSAGE_CAPTURED_PHOTO -> {
-                    val byteArrayExtra = intent?.getByteArrayExtra(BROADCAST_MESSAGE_CAPTURED_PHOTO_BYTES)
+                BROADCAST_MSG_CAPTURED_PHOTO -> {
+                    Util.log("MainAcitivity got BroadcastMessage $intent")
+                    val byteArrayExtra = intent?.getByteArrayExtra(BROADCAST_MSG_CAPTURED_PHOTO_BYTES)
                     updateUIStatistics()
+
+                    val compressImage = Util.compressImage(byteArrayExtra!!)
+                    Util.log("Size of photo: ${byteArrayExtra?.size}, and after compressed: ${compressImage.size}")
 
                     if(byteArrayExtra != null) {
                         if(surfaceContainer.childCount > 0) {
@@ -304,15 +311,15 @@ class MainActivity : AppCompatActivity() {
                         })
                     }
                 }
-                BROADCAST_MESSAGE_FAILED -> {
+                BROADCAST_MSG_FAILED -> {
                     Util.log("Broadcast received msg failed")
                     onTimelapseCompleteOrFail()
                 }
-                BROADCAST_MESSAGE_COMPLETE -> {
+                BROADCAST_MSG_COMPLETE -> {
                     Util.log("Broadcast received msg complete")
                     onTimelapseCompleteOrFail()
                 }
-                BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS -> {
+                BROADCAST_MSG_REMOTE_EDIT_SETTINGS -> {
                     if(intent?.getBooleanExtra("resolution", false) == true) {
                         if(TimelapseController.getState() == TimelapseController.State.PREVIEW) {
                             TimelapseController.stopPreview()
@@ -322,12 +329,12 @@ class MainActivity : AppCompatActivity() {
 
                     updateUIStatistics()
                 }
-                BROADCAST_MESSAGE_REMOTE_START_TIMELAPSE -> {
+                BROADCAST_MSG_REMOTE_START_TIMELAPSE -> {
                     btnStartTimelapse.setImageResource(R.drawable.stop)
                     startCountdownNextPhotoThread()
                     updateUIStatistics()
                 }
-                BROADCAST_MESSAGE_REMOTE_STOP_TIMELAPSE -> {
+                BROADCAST_MSG_REMOTE_STOP_TIMELAPSE -> {
                     onTimelapseCompleteOrFail()
                 }
             }

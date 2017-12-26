@@ -10,6 +10,7 @@ import android.content.pm.PackageManager
 import android.os.BatteryManager
 import android.os.Build
 import android.support.v4.content.ContextCompat
+import android.support.v4.content.LocalBroadcastManager
 import android.support.v4.content.PermissionChecker
 import android.telephony.TelephonyManager
 import android.util.Base64
@@ -24,6 +25,10 @@ import pl.kflorczyk.timelapsemaker.timelapse.TimelapseSettings
 import java.net.InetAddress
 import java.net.NetworkInterface
 import java.util.*
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import java.io.ByteArrayOutputStream
+
 
 /**
  * Created by Kamil on 11/13/2016.
@@ -41,6 +46,29 @@ object Util {
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN)
+
+    fun compressImage(sourceBytes: ByteArray): ByteArray {
+        val bm = BitmapFactory.decodeByteArray(sourceBytes, 0, sourceBytes.size)
+        val outputStream = ByteArrayOutputStream()
+        bm.compress(Bitmap.CompressFormat.JPEG, 60, outputStream)
+        val b = outputStream.toByteArray()
+
+//        base64image = Base64.encodeToString(b, Base64.NO_WRAP)
+        Util.log(String.format("Made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%",
+                (sourceBytes.size/1024f).toInt(), (b.size/1024f).toInt(), ((sourceBytes.size-b.size)/sourceBytes.size)*100f))
+        return b
+    }
+
+    fun broadcastMessage(context: Context, msg: String, vararg extra: String) {
+        val intent = Intent(MainActivity.BROADCAST_FILTER)
+        intent.putExtra(MainActivity.BROADCAST_MSG, msg)
+
+        for(e in extra) {
+            intent.putExtra(e, true)
+        }
+
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
+    }
 
     fun generateDeviceUUID(): String = "%s_%s".format(android.os.Build.PRODUCT, UUID.randomUUID())
 

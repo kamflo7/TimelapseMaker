@@ -1,16 +1,20 @@
 package pl.kflorczyk.timelapsemaker.http_server
 
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
+import android.content.IntentFilter
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.support.v4.content.LocalBroadcastManager
+import android.view.SurfaceHolder
+import android.view.SurfaceView
+import android.widget.RelativeLayout
 import fi.iki.elonen.NanoHTTPD
 import org.json.JSONArray
 import org.json.JSONObject
-import pl.kflorczyk.timelapsemaker.MainActivity
-import pl.kflorczyk.timelapsemaker.MyApplication
-import pl.kflorczyk.timelapsemaker.StorageManager
-import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.*
+import pl.kflorczyk.timelapsemaker.Util.broadcastMessage
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseController
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseService
@@ -25,9 +29,24 @@ import java.io.InputStreamReader
  * Created by Kamil on 2017-12-16.
  */
 class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
-
     val context: Context = context
     var timelapseSettings: TimelapseSettings = (context.applicationContext as MyApplication).timelapseSettings!!
+
+    private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
+
+            Util.log("HttpServer got BroadcastMessage: $intent")
+        }
+    }
+
+    init {
+        LocalBroadcastManager.getInstance(this.context).registerReceiver(mMessageReceiver, IntentFilter(MainActivity.BROADCAST_FILTER))
+    }
+
+    override fun stop() {
+        LocalBroadcastManager.getInstance(this.context).unregisterReceiver(mMessageReceiver)
+    }
 
     override fun serve(session: IHTTPSession): Response {
 
@@ -124,7 +143,7 @@ class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
             return newFixedLengthResponse(MyResponse(MyResponse.ResponseStatus.FAIL, "Timelapse is not currently created", null).build())
 
         context.stopService(Intent(context, TimelapseService::class.java))
-        broadcastMessage(MainActivity.BROADCAST_MESSAGE_REMOTE_STOP_TIMELAPSE)
+        broadcastMessage(this@HttpServer.context, MainActivity.BROADCAST_MSG_REMOTE_STOP_TIMELAPSE)
         return newFixedLengthResponse(MyResponse(MyResponse.ResponseStatus.OK, null, null).build())
     }
 
@@ -139,7 +158,7 @@ class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
         }
 
         context.startService(Intent(context, TimelapseService::class.java))
-        broadcastMessage(MainActivity.BROADCAST_MESSAGE_REMOTE_START_TIMELAPSE)
+        broadcastMessage(this@HttpServer.context, MainActivity.BROADCAST_MSG_REMOTE_START_TIMELAPSE)
         return newFixedLengthResponse(MyResponse(MyResponse.ResponseStatus.OK, null, null).build())
     }
 
@@ -183,7 +202,7 @@ class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
                 val frequency = value.toLong()
                 timelapseSettings.frequencyCapturing = frequency
 
-                broadcastMessage(MainActivity.BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS)
+                broadcastMessage(this@HttpServer.context, MainActivity.BROADCAST_MSG_REMOTE_EDIT_SETTINGS)
             }
             "resolution" -> {
                 var parts: List<String> = value.split("x")
@@ -194,7 +213,7 @@ class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
                     val resolution = timelapseSettings.availableResolutions.find { r -> r.width == width && r.height == height }
                     if(resolution != null) {
                         timelapseSettings.resolution = resolution
-                        broadcastMessage(MainActivity.BROADCAST_MESSAGE_REMOTE_EDIT_SETTINGS, "resolution")
+                        broadcastMessage(this@HttpServer.context, MainActivity.BROADCAST_MSG_REMOTE_EDIT_SETTINGS, "resolution")
                         return newFixedLengthResponse("Ok")
                     }
                 }
@@ -214,16 +233,5 @@ class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
 
 
         return newFixedLengthResponse("Ok")
-    }
-
-    private fun broadcastMessage(msg: String, vararg extra: String) {
-        val intent = Intent(MainActivity.BROADCAST_FILTER)
-        intent.putExtra(MainActivity.BROADCAST_MSG, msg)
-
-        for(e in extra) {
-            intent.putExtra(e, true)
-        }
-
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent)
     }
 }
