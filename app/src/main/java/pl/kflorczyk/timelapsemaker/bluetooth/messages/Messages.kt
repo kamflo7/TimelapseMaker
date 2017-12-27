@@ -1,15 +1,22 @@
 package pl.kflorczyk.timelapsemaker.bluetooth.messages
 
-import kotlin.reflect.KClass
-
 /**
  * Created by Kamil on 2017-12-27.
  */
 class Messages {
+    enum class MessageType {
+        SERVER_START_TIMELAPSE,
+        SERVER_DO_CAPTURE,
 
+        CLIENT_TIMELAPSE_INITIALIZED,
+        CLIENT_CAPTURE_PROGRESS
+    }
+    
     companion object {
         val messages = arrayOf(
-                MessageDefinition(MessageType.SERVER_START_TIMELAPSE, false),
+                MessageDefinition(MessageType.SERVER_START_TIMELAPSE),
+                MessageDefinition(MessageType.SERVER_DO_CAPTURE),
+                MessageDefinition(MessageType.CLIENT_TIMELAPSE_INITIALIZED),
                 MessageDefinition(MessageType.CLIENT_CAPTURE_PROGRESS, true)
         )
 
@@ -17,7 +24,7 @@ class Messages {
             return messages.firstOrNull { it.msgType == msgType }
         }
 
-        fun build(msgType: MessageType, extraData: MessageSerializable?): ByteArray {
+        fun build(msgType: MessageType, extraData: MessageSerializable? = null): ByteArray {
             val msgTransport = MessageTransport()
             msgTransport.id = msgType.ordinal
 
@@ -38,12 +45,6 @@ class Messages {
 
     data class MessageDefinition(
             val msgType: MessageType,
-            val extraData: Boolean
+            val extraData: Boolean = false
     )
-
-    enum class MessageType {
-        SERVER_START_TIMELAPSE,
-
-        CLIENT_CAPTURE_PROGRESS
-    }
 }

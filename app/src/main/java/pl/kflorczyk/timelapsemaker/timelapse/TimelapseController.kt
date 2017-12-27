@@ -1,12 +1,17 @@
 package pl.kflorczyk.timelapsemaker.timelapse
 
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.view.SurfaceHolder
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import android.os.PowerManager
+import android.support.v4.content.LocalBroadcastManager
+import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothClientService
 import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
-
 
 /**
  * Created by Kamil on 2017-12-09.
@@ -46,8 +51,44 @@ object TimelapseController {
         CLIENT
     }
 
+    var currentBtMode: BluetoothMode = BluetoothMode.DISABLED
+
+    private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
+
+            Util.log("TimelapseController.MsgReceiver BTMODE: $currentBtMode; MSG: $msg")
+
+            if(currentBtMode == BluetoothMode.SERVER) {
+                when(msg) {
+                // messages for servers
+                    BluetoothServerService.BT_SERVER_CLIENTS_READY -> {
+                        Util.log("BTSERVER ready, capture first photo")
+                        timeAtStartCapturingPhoto = System.currentTimeMillis()
+                        strategy!!.capturePhoto()
+                        Util.broadcastMessage(this@TimelapseController.context!!.first, BluetoothServerService.BT_SERVER_DO_CAPTURE)
+                    }
+                }
+            } else if(currentBtMode == BluetoothMode.CLIENT) {
+                when(msg) {
+                // messages for clients
+                    BluetoothClientService.BT_CLIENT_DO_CAPTURE -> {
+                        Util.log("[BT Client] Capturing final photo")
+                        timeAtStartCapturingPhoto = System.currentTimeMillis()
+                        strategy!!.capturePhoto()
+                    }
+                }
+            }
+        }
+    }
+
     fun startTimelapse(onTimelapseProgressListener: OnTimelapseProgressListener, context: Context, mode: BluetoothMode = BluetoothMode.DISABLED) {
         if(strategy == null || settings == null) throw RuntimeException("TimelapseControllerStrategy is not prepared correctly (Did you invoke build() method?)")
+        if(mode != BluetoothMode.DISABLED) {
+            LocalBroadcastManager.getInstance(context).registerReceiver(mMessageReceiver, IntentFilter(MainActivity.BROADCAST_FILTER))
+        }
+        currentBtMode = mode
+        Util.log("TimelapseController::startTimelapse with mode: $mode")
 
         this.context = Pair(context, null)
 
@@ -62,6 +103,45 @@ object TimelapseController {
         when(mode) {
             BluetoothMode.DISABLED -> strategy!!.startTimelapse(btDisabled_onTimelapseStateChangeListener, context)
             BluetoothMode.SERVER -> strategy!!.startTimelapse(btServer_onTimelapseStateChangeListener, context)
+            BluetoothMode.CLIENT -> strategy!!.startTimelapse(btClient_onTimelapseStateChangeListener, context)
+        }
+    }
+
+    private var btClient_onTimelapseStateChangeListener = object : OnTimelapseStateChangeListener {
+        override fun onInit() {
+            this@TimelapseController.state = State.TIMELAPSE
+            Util.broadcastMessage(context!!.first, BluetoothClientService.BT_CLIENT_TIMELAPSE_INITIALIZED)
+//            timeAtStartCapturingPhoto = System.currentTimeMillis()
+//            strategy!!.capturePhoto()
+        }
+
+        override fun onCapture(bytes: ByteArray?) {
+            Util.log("TimelapseController::onCapture($capturedPhotos)")
+            capturedPhotos++
+
+            if(capturedPhotos == settings!!.photosMax) {
+                this@TimelapseController.stopTimelapse()
+                this@TimelapseController.listenerOutside!!.onComplete()
+                return
+            }
+
+            this@TimelapseController.listenerOutside!!.onCapture(bytes)
+
+            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+            if(delayToNextCapture < 0)
+                delayToNextCapture = 0
+
+            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+
+            timeAtStartCapturingPhoto = System.currentTimeMillis()
+            strategy!!.capturePhoto()
+        }
+
+        override fun onFail(msg: String) {
+            this@TimelapseController.stopTimelapse()
+            this@TimelapseController.listenerOutside!!.onFail(msg)
         }
     }
 
@@ -69,7 +149,7 @@ object TimelapseController {
         override fun onInit() {
             this@TimelapseController.state = State.TIMELAPSE
 
-            Util.broadcastMessage(context!!.first, BluetoothServerService.BT_SERVER_START_TIMELAPSE)
+            Util.broadcastMessage(context!!.first, BluetoothServerService.BT_SERVER_TIMELAPSE_START)
 
 //            timeAtStartCapturingPhoto = System.currentTimeMillis()
 //            strategy!!.capturePhoto()
@@ -168,6 +248,8 @@ object TimelapseController {
         if(state == State.TIMELAPSE) {
             strategy?.stopTimelapse()
             wakeLock?.release()
+
+            LocalBroadcastManager.getInstance(context!!.first).unregisterReceiver(mMessageReceiver)
 
             capturedPhotos = 0
             state = State.NOTHING

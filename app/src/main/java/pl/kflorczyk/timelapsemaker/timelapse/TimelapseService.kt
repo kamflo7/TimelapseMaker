@@ -1,7 +1,10 @@
 package pl.kflorczyk.timelapsemaker.timelapse
 
 import android.app.Service
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.IBinder
 import android.support.v4.content.LocalBroadcastManager
 import pl.kflorczyk.timelapsemaker.*
@@ -21,6 +24,16 @@ class TimelapseService : Service() {
         super.onCreate()
     }
 
+//    private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+//        override fun onReceive(context: Context?, intent: Intent?) {
+//            var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
+//
+//            when (msg) {
+//
+//            }
+//        }
+//    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val storageType = (application as MyApplication).timelapseSettings!!.storageType
         storageManager = StorageManager(storageType, applicationContext)
@@ -31,6 +44,9 @@ class TimelapseService : Service() {
             this@TimelapseService.stopSelf()
             return START_STICKY
         }
+
+//        LocalBroadcastManager.getInstance(this).registerReceiver(mMessageReceiver, IntentFilter(MainActivity.BROADCAST_FILTER))
+
 
         var runnable = Runnable {
             var listener = object : TimelapseController.OnTimelapseProgressListener {
@@ -89,6 +105,7 @@ class TimelapseService : Service() {
     override fun onDestroy() {
         super.onDestroy()
 
+//        LocalBroadcastManager.getInstance(this).unregisterReceiver(mMessageReceiver)
         TimelapseController.stopTimelapse()
 
         worker!!.handler = null

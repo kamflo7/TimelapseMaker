@@ -13,22 +13,33 @@ import android.support.v4.content.LocalBroadcastManager
 import android.widget.Toast
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
-import pl.kflorczyk.timelapsemaker.Util.broadcastMessage
 import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
-import java.io.ByteArrayInputStream
+import pl.kflorczyk.timelapsemaker.timelapse.TimelapseService
 import java.io.IOException
-import java.io.ObjectInputStream
 
 /**
  * Created by Kamil on 2017-12-25.
  */
 class BluetoothClientService: Service() {
 
+    companion object {
+        val BT_CLIENT_TIMELAPSE_INITIALIZED: String = "btClientTimelapseInitialized"
+        val BT_CLIENT_DO_CAPTURE: String = "btClientDoCapture"
+    }
+
     private var connectedThread: ConnectedThread? = null
 
     private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
+
+            when(msg) {
+                //
+                BT_CLIENT_TIMELAPSE_INITIALIZED -> {
+                    val bytesMsg = Messages.build(Messages.MessageType.CLIENT_TIMELAPSE_INITIALIZED)
+                    connectedThread!!.write(bytesMsg)
+                }
+            }
 
             Util.log("HttpServer got BroadcastMessage: $intent")
         }
@@ -40,7 +51,16 @@ class BluetoothClientService: Service() {
 
         when(msgType) {
             Messages.MessageType.SERVER_START_TIMELAPSE.ordinal -> {
+                if(!Util.isMyServiceRunning(TimelapseService::class.java, applicationContext)) {
+                    Util.log("[Client] Server send start message")
+                    startService(Intent(applicationContext, TimelapseService::class.java))
+                }
+
                 Toast.makeText(applicationContext, "Server says to start Timelapse!", Toast.LENGTH_LONG).show()
+            }
+            Messages.MessageType.SERVER_DO_CAPTURE.ordinal -> {
+                Util.broadcastMessage(applicationContext, BT_CLIENT_DO_CAPTURE)
+                Util.log("[Client] Server send capture message")
             }
         }
         true

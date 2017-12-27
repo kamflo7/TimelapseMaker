@@ -14,7 +14,6 @@ import android.support.v4.content.LocalBroadcastManager
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.WorkerThread
-import pl.kflorczyk.timelapsemaker.bluetooth.messages.MessageSerializable
 import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
 import java.io.IOException
 import kotlin.collections.ArrayList
@@ -24,24 +23,32 @@ import kotlin.collections.ArrayList
  */
 class BluetoothServerService : Service() {
     companion object {
-        val BT_SERVER_START_TIMELAPSE: String = "btServerStartTimelapse"
+        val BT_SERVER_TIMELAPSE_START: String = "btServerStartTimelapse"
+        val BT_SERVER_CLIENTS_READY: String = "btServerClientsReady"
+        val BT_SERVER_DO_CAPTURE: String = "btServerDoCapture"
     }
 
     private var worker: WorkerThread? = null
-//    private var connectedThread: ConnectedThread? = null
     private var connectedThreads: ArrayList<ConnectedThread> = ArrayList()
+    private var clientsReadyForCapture = 0
 
     private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
 
             when(msg) {
-                BT_SERVER_START_TIMELAPSE -> {
+                BT_SERVER_TIMELAPSE_START -> {
+                    clientsReadyForCapture = 0
                     val msgBytes = Messages.build(Messages.MessageType.SERVER_START_TIMELAPSE, null)
 
-                    for(connectedThread in connectedThreads) {
+                    for(connectedThread in connectedThreads)
                         connectedThread.write(msgBytes)
-                    }
+                }
+                BT_SERVER_DO_CAPTURE -> {
+                    val msgBytes = Messages.build(Messages.MessageType.SERVER_DO_CAPTURE, null)
+
+                    for(connectedThread in connectedThreads)
+                        connectedThread.write(msgBytes)
                 }
             }
         }
@@ -52,11 +59,12 @@ class BluetoothServerService : Service() {
         val response = msg.obj as ConnectedThread.ResponseMessage
 
         when(msgType) {
-            ConnectedThread.MESSAGE_READ -> {
-
-            }
-            ConnectedThread.MESSAGE_WRITE -> {
-
+            Messages.MessageType.CLIENT_TIMELAPSE_INITIALIZED.ordinal -> {
+                clientsReadyForCapture++
+                Util.log("BluetoothServer CLIENT_TIMELAPSE_INITIALIZED $clientsReadyForCapture / ${connectedThreads.size}")
+                if(clientsReadyForCapture == connectedThreads.size) {
+                    Util.broadcastMessage(applicationContext, BT_SERVER_CLIENTS_READY)
+                }
             }
         }
         true
