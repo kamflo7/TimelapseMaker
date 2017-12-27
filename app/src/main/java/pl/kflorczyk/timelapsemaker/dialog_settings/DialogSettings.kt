@@ -447,18 +447,24 @@ class DialogSettings(acitvity: Activity, fab: FloatingActionButton, onDialogSett
             revealAnimator.start()
 
         } else {
-            var anim = ViewAnimationUtils.createCircularReveal(view, cx, cy, endRadius.toFloat(), 0f)
+            if(android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.LOLLIPOP) {
+                dialog?.dismiss()
+                view.visibility = View.INVISIBLE
+                this@DialogSettings.onDialogSettingChangeListener?.onDialogExit()
+            } else {
+                var anim = ViewAnimationUtils.createCircularReveal(view, cx, cy, endRadius.toFloat(), 0f)
 
-            anim.addListener(object : AnimatorListenerAdapter() {
-                override fun onAnimationEnd(animation: Animator) {
-                    super.onAnimationEnd(animation)
-                    dialog?.dismiss()
-                    view.visibility = View.INVISIBLE
-                    this@DialogSettings.onDialogSettingChangeListener?.onDialogExit()
-                }
-            })
-            anim.duration = 700
-            anim.start()
+                anim.addListener(object : AnimatorListenerAdapter() {
+                    override fun onAnimationEnd(animation: Animator) {
+                        super.onAnimationEnd(animation)
+                        dialog?.dismiss()
+                        view.visibility = View.INVISIBLE
+                        this@DialogSettings.onDialogSettingChangeListener?.onDialogExit()
+                    }
+                })
+                anim.duration = 700
+                anim.start()
+            }
         }
 
     }

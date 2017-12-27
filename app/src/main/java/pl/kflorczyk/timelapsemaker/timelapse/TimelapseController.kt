@@ -5,6 +5,7 @@ import android.view.SurfaceHolder
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import android.os.PowerManager
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
 
 
 /**
@@ -14,6 +15,8 @@ object TimelapseController {
 
     private var strategy: TimelapseControllerStrategy? = null
     private var settings: TimelapseSettings? = null
+
+    private var context: Pair<Context, Any?>? = null
 
     private var state:State = State.NOTHING
     private var listenerOutside: OnTimelapseProgressListener? = null
@@ -37,8 +40,16 @@ object TimelapseController {
         this.settings = settings
     }
 
-    fun startTimelapse(onTimelapseProgressListener: OnTimelapseProgressListener, context: Context) {
+    enum class BluetoothMode {
+        DISABLED,
+        SERVER,
+        CLIENT
+    }
+
+    fun startTimelapse(onTimelapseProgressListener: OnTimelapseProgressListener, context: Context, mode: BluetoothMode = BluetoothMode.DISABLED) {
         if(strategy == null || settings == null) throw RuntimeException("TimelapseControllerStrategy is not prepared correctly (Did you invoke build() method?)")
+
+        this.context = Pair(context, null)
 
         powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = powerManager!!.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimelapseController_WakeLock")
@@ -47,42 +58,88 @@ object TimelapseController {
         capturedPhotos = 0
 
         this.listenerOutside = onTimelapseProgressListener
-        strategy!!.startTimelapse(object : OnTimelapseStateChangeListener {
-            override fun onInit() {
-                this@TimelapseController.state = State.TIMELAPSE
-                timeAtStartCapturingPhoto = System.currentTimeMillis()
-                strategy!!.capturePhoto()
-            }
 
-            override fun onCapture(bytes: ByteArray?) {
-                Util.log("TimelapseController::onCapture($capturedPhotos)")
-                capturedPhotos++
+        when(mode) {
+            BluetoothMode.DISABLED -> strategy!!.startTimelapse(btDisabled_onTimelapseStateChangeListener, context)
+            BluetoothMode.SERVER -> strategy!!.startTimelapse(btServer_onTimelapseStateChangeListener, context)
+        }
+    }
 
-                if(capturedPhotos == settings!!.photosMax) {
-                    this@TimelapseController.stopTimelapse()
-                    this@TimelapseController.listenerOutside!!.onComplete()
-                    return
-                }
+    private var btServer_onTimelapseStateChangeListener = object : OnTimelapseStateChangeListener {
+        override fun onInit() {
+            this@TimelapseController.state = State.TIMELAPSE
 
-                this@TimelapseController.listenerOutside!!.onCapture(bytes)
+            Util.broadcastMessage(context!!.first, BluetoothServerService.BT_SERVER_START_TIMELAPSE)
 
-                var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
-                if(delayToNextCapture < 0)
-                    delayToNextCapture = 0
+//            timeAtStartCapturingPhoto = System.currentTimeMillis()
+//            strategy!!.capturePhoto()
+        }
 
-                timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-                Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
-                Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+        override fun onCapture(bytes: ByteArray?) {
+            Util.log("TimelapseController::onCapture($capturedPhotos)")
+            capturedPhotos++
 
-                timeAtStartCapturingPhoto = System.currentTimeMillis()
-                strategy!!.capturePhoto()
-            }
-
-            override fun onFail(msg: String) {
+            if(capturedPhotos == settings!!.photosMax) {
                 this@TimelapseController.stopTimelapse()
-                this@TimelapseController.listenerOutside!!.onFail(msg)
+                this@TimelapseController.listenerOutside!!.onComplete()
+                return
             }
-        }, context)
+
+            this@TimelapseController.listenerOutside!!.onCapture(bytes)
+
+            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+            if(delayToNextCapture < 0)
+                delayToNextCapture = 0
+
+            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+
+            timeAtStartCapturingPhoto = System.currentTimeMillis()
+            strategy!!.capturePhoto()
+        }
+
+        override fun onFail(msg: String) {
+            this@TimelapseController.stopTimelapse()
+            this@TimelapseController.listenerOutside!!.onFail(msg)
+        }
+    }
+
+    private var btDisabled_onTimelapseStateChangeListener = object : OnTimelapseStateChangeListener {
+        override fun onInit() {
+            this@TimelapseController.state = State.TIMELAPSE
+            timeAtStartCapturingPhoto = System.currentTimeMillis()
+            strategy!!.capturePhoto()
+        }
+
+        override fun onCapture(bytes: ByteArray?) {
+            Util.log("TimelapseController::onCapture($capturedPhotos)")
+            capturedPhotos++
+
+            if(capturedPhotos == settings!!.photosMax) {
+                this@TimelapseController.stopTimelapse()
+                this@TimelapseController.listenerOutside!!.onComplete()
+                return
+            }
+
+            this@TimelapseController.listenerOutside!!.onCapture(bytes)
+
+            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+            if(delayToNextCapture < 0)
+                delayToNextCapture = 0
+
+            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+
+            timeAtStartCapturingPhoto = System.currentTimeMillis()
+            strategy!!.capturePhoto()
+        }
+
+        override fun onFail(msg: String) {
+            this@TimelapseController.stopTimelapse()
+            this@TimelapseController.listenerOutside!!.onFail(msg)
+        }
     }
 
     fun startPreviewing(settings: TimelapseSettings, surfaceHolder: SurfaceHolder, context:Context) {

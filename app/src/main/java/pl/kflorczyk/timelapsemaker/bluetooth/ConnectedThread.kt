@@ -46,13 +46,20 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
                 var read = 0
                 var headerMsg = ByteArray(8)
 
-                var msgID: Int
+                var msgID = 0
                 var dataLength: Int
                 var data: ByteArray? = null
                 var i = 0
 
                 do {
-                    val b = inputStream.read().toByte()
+                    val r = inputStream.read()
+                    if(r == -1) {
+                        Util.log("ConnectedThread->InputStream::read -1")
+                        cancel()
+                        return
+                    }
+
+                    val b = r.toByte()
                     if(b == (-2).toByte()) break
                     read++
 
@@ -74,7 +81,9 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
                 } while(b != (-2).toByte())
                 Util.log("End reading single message")
 
-                val msg = handler?.obtainMessage(MESSAGE_READ, -1, -1, data)
+                val responseMsg = ResponseMessage(this.socket, data!!)
+
+                val msg = handler?.obtainMessage(msgID, -1, -1, responseMsg)
                 msg?.sendToTarget()
             } catch (e: IOException) {
                 e.printStackTrace()
@@ -99,4 +108,9 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
             e.printStackTrace()
         }
     }
+
+    data class ResponseMessage(
+            val socket: BluetoothSocket,
+            val data: ByteArray
+    )
 }

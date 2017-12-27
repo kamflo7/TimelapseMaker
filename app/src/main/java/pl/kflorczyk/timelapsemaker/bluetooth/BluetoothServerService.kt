@@ -4,13 +4,18 @@ import android.app.Service
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothServerSocket
 import android.bluetooth.BluetoothSocket
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
+import android.support.v4.content.LocalBroadcastManager
+import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.WorkerThread
-import pl.kflorczyk.timelapsemaker.bluetooth.messages.MessageCaptureProgress
-import pl.kflorczyk.timelapsemaker.bluetooth.messages.MessageTransport
+import pl.kflorczyk.timelapsemaker.bluetooth.messages.MessageSerializable
+import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
 import java.io.IOException
 import kotlin.collections.ArrayList
 
@@ -18,18 +23,37 @@ import kotlin.collections.ArrayList
  * Created by Kamil on 2017-12-20.
  */
 class BluetoothServerService : Service() {
+    companion object {
+        val BT_SERVER_START_TIMELAPSE: String = "btServerStartTimelapse"
+    }
 
     private var worker: WorkerThread? = null
-    private var connectedThread: ConnectedThread? = null
+//    private var connectedThread: ConnectedThread? = null
+    private var connectedThreads: ArrayList<ConnectedThread> = ArrayList()
+
+    private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
+
+            when(msg) {
+                BT_SERVER_START_TIMELAPSE -> {
+                    val msgBytes = Messages.build(Messages.MessageType.SERVER_START_TIMELAPSE, null)
+
+                    for(connectedThread in connectedThreads) {
+                        connectedThread.write(msgBytes)
+                    }
+                }
+            }
+        }
+    }
 
     private var handler: Handler = Handler(Handler.Callback { msg ->
         val msgType = msg.what
-        val data = msg.obj
+        val response = msg.obj as ConnectedThread.ResponseMessage
 
         when(msgType) {
             ConnectedThread.MESSAGE_READ -> {
-                Util.log("BTServerService.Handler.onMessage type: $msgType, data: $data")
-                Util.broadcastMessage(applicationContext, "server_is_getting_msg_from_server")
+
             }
             ConnectedThread.MESSAGE_WRITE -> {
 
@@ -43,6 +67,8 @@ class BluetoothServerService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(mMessageReceiver, IntentFilter(MainActivity.BROADCAST_FILTER))
+
         Util.log("BluetoothServerService::onStartCommand!")
         var btAdapter = BluetoothAdapter.getDefaultAdapter()
         var serverSocket: BluetoothServerSocket? = null
@@ -82,45 +108,34 @@ class BluetoothServerService : Service() {
 
     fun manageSocket(socket: BluetoothSocket) {
         Util.log("[BluetoothServerService] Some client has connected, initializing input/output streams..")
-        connectedThread = ConnectedThread(socket, this.handler)
-        connectedThread!!.start()
+        val connectedThread = ConnectedThread(socket, this.handler)
+        connectedThread.start()
 
-        val msg = MessageCaptureProgress()
-        msg.battery = 77.43f
-        msg.image = byteArrayOf(1, 2, 30, 40, 127, 125)
+        connectedThreads.add(connectedThread)
 
-        val encodedMsg = msg.toByteArray()
-
-        val transport = MessageTransport()
-        transport.id = 150_000_000
-        transport.length = encodedMsg.size
-        transport.data = encodedMsg
-
-        Util.log("Sending msg length ${transport.length}")
-
-        val finalEncodedMsg = transport.toByteArray()
-
-        connectedThread!!.write(finalEncodedMsg)
-
-        // serialization test
-//        val testMsg = TestMessage()
-//        testMsg.description = "Przykladowy opis"
-//        testMsg.number = 170
-//        testMsg.floatNumber = 54.75f
+//        val msg = MessageCaptureProgress()
+//        msg.battery = 77.43f
+//        msg.image = byteArrayOf(1, 2, 30, 40, 127, 125)
 //
-//        val bos = ByteArrayOutputStream()
-//        ObjectOutputStream(bos).use({ os -> os.writeObject(testMsg) })
+//        val encodedMsg = msg.toByteArray()
 //
-//        val serialized = bos.toByteArray()
-//        connectedThread!!.write(serialized)
-        // serialisation END
-
-//        connectedThread!!.write(byteArrayOf(1, 2, 3, 4, 5, 6, 7, -2, (-2).toByte()))
+//        val transport = MessageTransport()
+//        transport.id = 150_000_000
+//        transport.length = encodedMsg.size
+//        transport.data = encodedMsg
+//
+//        Util.log("Sending msg length ${transport.length}")
+//
+//        val finalEncodedMsg = transport.toByteArray()
+//        connectedThread!!.write(finalEncodedMsg)
     }
 
     override fun onDestroy() {
-        connectedThread?.cancel()
-        connectedThread = null
+        for(connectedThread in connectedThreads) {
+            connectedThread.cancel()
+        }
+
+        LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(mMessageReceiver)
     }
 
     override fun onLowMemory() {

@@ -5,6 +5,8 @@ import android.content.Intent
 import android.os.IBinder
 import android.support.v4.content.LocalBroadcastManager
 import pl.kflorczyk.timelapsemaker.*
+import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothClientService
+import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
 
 
 /**
@@ -58,8 +60,15 @@ class TimelapseService : Service() {
                 }
             }
 
+            var bluetoothMode: TimelapseController.BluetoothMode = TimelapseController.BluetoothMode.DISABLED
+
+            if(Util.isMyServiceRunning(BluetoothServerService::class.java, applicationContext))
+                bluetoothMode = TimelapseController.BluetoothMode.SERVER
+            else if(Util.isMyServiceRunning(BluetoothClientService::class.java, applicationContext))
+                bluetoothMode = TimelapseController.BluetoothMode.CLIENT
+
             try {
-                TimelapseController.startTimelapse(listener, this@TimelapseService.applicationContext)
+                TimelapseController.startTimelapse(listener, this@TimelapseService.applicationContext, bluetoothMode)
             } catch(e: RuntimeException) {
                 val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_FAILED)
                 LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)

@@ -10,9 +10,11 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.support.v4.content.LocalBroadcastManager
+import android.widget.Toast
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
 import pl.kflorczyk.timelapsemaker.Util.broadcastMessage
+import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.ObjectInputStream
@@ -34,16 +36,11 @@ class BluetoothClientService: Service() {
 
     private var handler: Handler = Handler(Handler.Callback { msg ->
         val msgType = msg.what
-        val data = msg.obj as ByteArray
+        val response = msg.obj as ConnectedThread.ResponseMessage
 
         when(msgType) {
-            ConnectedThread.MESSAGE_READ -> {
-
-                Util.log("BTClientService.Handler.onMessage type: $msgType, data: $data")
-//                broadcastMessage(applicationContext, "client_is_getting_msg_from_server")
-            }
-            ConnectedThread.MESSAGE_WRITE -> {
-
+            Messages.MessageType.SERVER_START_TIMELAPSE.ordinal -> {
+                Toast.makeText(applicationContext, "Server says to start Timelapse!", Toast.LENGTH_LONG).show()
             }
         }
         true
