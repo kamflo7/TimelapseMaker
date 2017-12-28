@@ -2,6 +2,8 @@ package pl.kflorczyk.timelapsemaker
 
 import android.content.Context
 import android.os.Environment
+import android.util.Log
+import pl.kflorczyk.timelapsemaker.Util.log
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
@@ -9,6 +11,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 
 class StorageManager(type: StorageType, context: Context) {
+    private val TAG = "StorageManager"
 
     private val type: StorageType = type
     private val context: Context = context
@@ -44,9 +47,9 @@ class StorageManager(type: StorageType, context: Context) {
             val fos = FileOutputStream(photo.path)
             fos.write(bytes)
             fos.close()
-            Util.log("StorageManager::savingImage to " + photo.absolutePath)
+            log(TAG, "savePhoto(ByteArray, Int), location = " + photo.absolutePath)
         } catch (e: IOException) {
-            Util.log("StorageManager::saveImage() exception -> " + e.message)
+            log(TAG, "savePhoto(ByteArray, Int) -> IOException:  " + e.message)
             throw e
         }
     }

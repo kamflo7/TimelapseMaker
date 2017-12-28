@@ -35,6 +35,8 @@ import java.io.ByteArrayOutputStream
  */
 
 object Util {
+    val TAG = "Util"
+
     val NECESSARY_PERMISSIONS_START_APP = arrayOf(
             Manifest.permission.CAMERA,
             Manifest.permission.WRITE_EXTERNAL_STORAGE,
@@ -47,6 +49,10 @@ object Util {
             Manifest.permission.BLUETOOTH,
             Manifest.permission.BLUETOOTH_ADMIN)
 
+    fun log(tag: String, msg: String) {
+        Log.d(tag, "[AppLog] " + msg)
+    }
+
     fun compressImage(sourceBytes: ByteArray): ByteArray {
         val bm = BitmapFactory.decodeByteArray(sourceBytes, 0, sourceBytes.size)
         val outputStream = ByteArrayOutputStream()
@@ -54,7 +60,7 @@ object Util {
         val b = outputStream.toByteArray()
 
 //        base64image = Base64.encodeToString(b, Base64.NO_WRAP)
-        Util.log(String.format("Made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%",
+        Log.d(TAG, String.format("Made base64 image. Compressed from %dKB to %dKB, reduced %.1f%%",
                 (sourceBytes.size/1024f).toInt(), (b.size/1024f).toInt(), ((sourceBytes.size-b.size)/sourceBytes.size)*100f))
         return b
     }
@@ -129,11 +135,11 @@ prefsManager.getCameraVersionAPI() ?: CameraVersionAPI.V_1,
         return version
     }
 
-    fun log(str: String, tag: String = "test", vararg params: Any) {
-        val formated = if (params.isEmpty()) str else String.format(str, *params)
-
-        Log.d(tag, formated)
-    }
+//    fun log(tag: String, str: String, vararg params: Any) {
+//        val formated = if (params.isEmpty()) str else String.format(str, *params)
+//
+//        Log.d(tag, formated)
+//    }
 
     fun isMyServiceRunning(serviceClass: Class<*>, context: Context): Boolean {
         val manager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager

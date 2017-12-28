@@ -11,8 +11,11 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
+import android.widget.Toast
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.Util.log
 import pl.kflorczyk.timelapsemaker.WorkerThread
 import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
 import java.io.IOException
@@ -22,6 +25,8 @@ import kotlin.collections.ArrayList
  * Created by Kamil on 2017-12-20.
  */
 class BluetoothServerService : Service() {
+    private val TAG = "BluetoothServerService"
+    
     companion object {
         val BT_SERVER_TIMELAPSE_START: String = "btServerStartTimelapse"
         val BT_SERVER_CLIENTS_READY: String = "btServerClientsReady"
@@ -63,16 +68,24 @@ class BluetoothServerService : Service() {
         val response = msg.obj as ConnectedThread.ResponseMessage
 
         when(msgType) {
+            Messages.MessageType.DEBUG.ordinal -> {
+                var s = msg.obj as String
+                Toast.makeText(applicationContext, "DEBUG: $s", Toast.LENGTH_LONG).show()
+            }
+
             Messages.MessageType.CLIENT_TIMELAPSE_INITIALIZED.ordinal -> {
                 clientsReadyForCapture++
-                Util.log("BluetoothServer CLIENT_TIMELAPSE_INITIALIZED $clientsReadyForCapture / ${connectedThreads.size}")
+                log(TAG, "[Handler] CLIENT_TIMELAPSE_INITIALIZED $clientsReadyForCapture / ${connectedThreads.size}")
                 if(clientsReadyForCapture == connectedThreads.size) {
                     Util.broadcastMessage(applicationContext, BT_SERVER_CLIENTS_READY)
+                    Toast.makeText(applicationContext, "CLIENTS READY", Toast.LENGTH_SHORT).show()
                 }
             }
             Messages.MessageType.CLIENT_CAPTURED.ordinal -> {
                 clientsCapturedPhoto++
+                log(TAG, "[Handler] CLIENT_CAPTURED $clientsCapturedPhoto / ${connectedThreads.size}")
                 if(clientsCapturedPhoto == connectedThreads.size) {
+                    Toast.makeText(applicationContext, "CLIENTS CAPTURED", Toast.LENGTH_SHORT).show()
                     Util.broadcastMessage(applicationContext, BT_SERVER_CAPTURE_PHOTO_COMPLETE)
                 }
             }
@@ -87,17 +100,21 @@ class BluetoothServerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         LocalBroadcastManager.getInstance(applicationContext).registerReceiver(mMessageReceiver, IntentFilter(MainActivity.BROADCAST_FILTER))
 
-        Util.log("BluetoothServerService::onStartCommand!")
         var btAdapter = BluetoothAdapter.getDefaultAdapter()
         var serverSocket: BluetoothServerSocket? = null
+
+        log(TAG, "onStartCommand -> btAdapter: $btAdapter")
 
         try {
             serverSocket = btAdapter.listenUsingRfcommWithServiceRecord("BTServer", BluetoothManager.uuid)
         } catch(e: IOException) {
+            Toast.makeText(applicationContext, "Exception start listening SocketClients", Toast.LENGTH_LONG).show()
+            log(TAG, "btAdapter.listenUsingRfcommWithServicerecord -> IOException")
             e.printStackTrace()
             stopSelf()
             return START_STICKY
         }
+        Toast.makeText(applicationContext, "BTServerSocket start listening", Toast.LENGTH_SHORT).show()
 
         val runnable = Runnable {
             while(true) {
@@ -125,7 +142,8 @@ class BluetoothServerService : Service() {
     private var clients: List<BluetoothSocket> = ArrayList()
 
     fun manageSocket(socket: BluetoothSocket) {
-        Util.log("[BluetoothServerService] Some client has connected, initializing input/output streams..")
+        log(TAG, "manageSocket() -> Some client has connected, initializing input/output streams..")
+        Toast.makeText(applicationContext, "Some BTClient connected", Toast.LENGTH_SHORT).show()
         val connectedThread = ConnectedThread(socket, this.handler)
         connectedThread.start()
 
@@ -142,13 +160,15 @@ class BluetoothServerService : Service() {
 //        transport.length = encodedMsg.size
 //        transport.data = encodedMsg
 //
-//        Util.log("Sending msg length ${transport.length}")
+//        log(TAG, "Sending msg length ${transport.length}")
 //
 //        val finalEncodedMsg = transport.toByteArray()
 //        connectedThread!!.write(finalEncodedMsg)
     }
 
     override fun onDestroy() {
+        log(TAG, "onDestroy()")
+
         for(connectedThread in connectedThreads) {
             connectedThread.cancel()
         }

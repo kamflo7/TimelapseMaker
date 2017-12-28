@@ -7,6 +7,7 @@ import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
+import android.util.Log
 import java.io.IOException
 import java.util.*
 
@@ -14,6 +15,8 @@ import java.util.*
  * Created by Kamil on 2017-12-20.
  */
 class BluetoothManager(activity: Activity) {
+    private val TAG = "BluetoothManager"
+    
     companion object {
         val uuid:UUID = UUID.fromString("b30eec59-135e-4cd7-b6f1-bf126261ed3f")
     }
@@ -84,7 +87,7 @@ class BluetoothManager(activity: Activity) {
             activity.stopService(Intent(activity, BluetoothServerService::class.java))
         }
 
-        activity.startService(Intent(activity, BluetoothServerService::class.java))
+        activity.applicationContext.startService(Intent(activity.applicationContext, BluetoothServerService::class.java))
     }
 
     fun startDiscovering(listener: OnDiscoveringStateChangeListener) {
@@ -108,7 +111,7 @@ class BluetoothManager(activity: Activity) {
             for (device in pairedDevices) {
                 val deviceName = device.name
                 val deviceHardwareAddress = device.address
-                Util.log("[PairedDevice] $deviceName; $deviceHardwareAddress")
+                Log.d(TAG, "getBondedDevices() -> $deviceName; $deviceHardwareAddress")
             }
         }
     }

@@ -7,6 +7,7 @@ import android.content.IntentFilter
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.widget.RelativeLayout
@@ -15,6 +16,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import pl.kflorczyk.timelapsemaker.*
 import pl.kflorczyk.timelapsemaker.Util.broadcastMessage
+import pl.kflorczyk.timelapsemaker.Util.log
 import pl.kflorczyk.timelapsemaker.camera.CameraVersionAPI
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseController
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseService
@@ -29,6 +31,8 @@ import java.io.InputStreamReader
  * Created by Kamil on 2017-12-16.
  */
 class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
+    private val TAG = "HttpServer"
+
     val context: Context = context
     var timelapseSettings: TimelapseSettings = (context.applicationContext as MyApplication).timelapseSettings!!
 
@@ -36,7 +40,7 @@ class HttpServer(port: Int, context: Context) : NanoHTTPD(port) {
         override fun onReceive(context: Context?, intent: Intent?) {
             var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
 
-            Util.log("HttpServer got BroadcastMessage: $intent")
+            log(TAG, "[MessageReceiver] message: $msg; intent: $intent")
         }
     }
 

@@ -10,9 +10,11 @@ import android.content.IntentFilter
 import android.os.Handler
 import android.os.IBinder
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
 import android.widget.Toast
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.Util.log
 import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
 import pl.kflorczyk.timelapsemaker.timelapse.TimelapseService
 import java.io.IOException
@@ -21,6 +23,7 @@ import java.io.IOException
  * Created by Kamil on 2017-12-25.
  */
 class BluetoothClientService: Service() {
+    private val TAG = "BluetoothClientService"
 
     companion object {
         val BT_CLIENT_TIMELAPSE_INITIALIZED: String = "btClientTimelapseInitialized"
@@ -39,7 +42,7 @@ class BluetoothClientService: Service() {
                 BT_CLIENT_CAPTURED -> connectedThread!!.write(Messages.build(Messages.MessageType.CLIENT_CAPTURED))
             }
 
-            Util.log("HttpServer got BroadcastMessage: $intent")
+            log(TAG, "HttpServer got BroadcastMessage: $intent")
         }
     }
 
@@ -50,7 +53,7 @@ class BluetoothClientService: Service() {
         when(msgType) {
             Messages.MessageType.SERVER_START_TIMELAPSE.ordinal -> {
                 if(!Util.isMyServiceRunning(TimelapseService::class.java, applicationContext)) {
-                    Util.log("[Client] Server send start message")
+                    log(TAG, "[Handler] Msg obatined from server: SERVER_START_TIMELAPSE")
                     startService(Intent(applicationContext, TimelapseService::class.java))
                 }
 
@@ -58,7 +61,8 @@ class BluetoothClientService: Service() {
             }
             Messages.MessageType.SERVER_DO_CAPTURE.ordinal -> {
                 Util.broadcastMessage(applicationContext, BT_CLIENT_DO_CAPTURE)
-                Util.log("[Client] Server send capture message")
+                log(TAG, "[Handler] Msg obatined from server: BT_CLIENT_DO_CAPTURE")
+                Toast.makeText(applicationContext, "Server said do capture!", Toast.LENGTH_SHORT).show()
             }
         }
         true
@@ -106,21 +110,11 @@ class BluetoothClientService: Service() {
     }
 
     fun manageConnectedClient(socket: BluetoothSocket) {
-        Util.log("[BluetoothClientService] Connected to the server, initializing input/output streams..")
+        log(TAG, "Connected to the BluetoothServer, initializing input/output streams..")
         connectedThread = ConnectedThread(socket, this.handler)
         connectedThread!!.start()
 
-//        Thread({
-//            var x: Boolean = false
-//
-//            while(true) {
-//                val byteArray = if (x) byteArrayOf(10, 20, 30, 40) else byteArrayOf(20, 40, 60, 80)
-//                x = !x
-//                connectedThread!!.write(byteArray)
-//
-//                Thread.sleep(4000)
-//            }
-//        }).start()
+
     }
 
     override fun onDestroy() {

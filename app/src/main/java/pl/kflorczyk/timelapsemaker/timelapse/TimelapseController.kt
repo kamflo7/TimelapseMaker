@@ -8,8 +8,10 @@ import android.view.SurfaceHolder
 import pl.kflorczyk.timelapsemaker.exceptions.CameraNotAvailableException
 import android.os.PowerManager
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
 import pl.kflorczyk.timelapsemaker.MainActivity
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.Util.log
 import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothClientService
 import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
 
@@ -17,6 +19,7 @@ import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
  * Created by Kamil on 2017-12-09.
  */
 object TimelapseController {
+    private val TAG = "TimelapseController"
 
     private var strategy: TimelapseControllerStrategy? = null
     private var settings: TimelapseSettings? = null
@@ -61,12 +64,12 @@ object TimelapseController {
         override fun onReceive(context: Context?, intent: Intent?) {
             var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
 
-            Util.log("TimelapseController.MsgReceiver BTMODE: $currentBtMode; MSG: $msg")
+            log(TAG, "[MessageReceiver][btMode: $currentBtMode] MSG: $msg")
 
             if(currentBtMode == BluetoothMode.SERVER) {
                 when(msg) {
                     BluetoothServerService.BT_SERVER_CLIENTS_READY -> {
-                        Util.log("BTSERVER ready, capture first photo")
+                        log(TAG, "[MessageReceiver][btMode: $currentBtMode] BT_SERVER_CLIENTS_READY")
                         timeAtStartCapturingPhoto = System.currentTimeMillis()
                         isServerCapturingPhoto = true
                         clientsDoneCapturing = false
@@ -74,7 +77,7 @@ object TimelapseController {
                         Util.broadcastMessage(this@TimelapseController.context!!.first, BluetoothServerService.BT_SERVER_DO_CAPTURE)
                     }
                     BluetoothServerService.BT_SERVER_CAPTURE_PHOTO_COMPLETE -> {
-                        Util.log("BTSERVER: All clients captured single photo")
+                        log(TAG, "[MessageReceiver][btMode: $currentBtMode] BT_SERVER_CAPTURE_PHOTO_COMPLETE; All clients captured single photo -> Can capture next..")
                         clientsDoneCapturing = true
                         if(!isServerCapturingPhoto) {
                             scheduleServerToCaptureNextPhoto()
@@ -84,7 +87,7 @@ object TimelapseController {
             } else if(currentBtMode == BluetoothMode.CLIENT) {
                 when(msg) {
                     BluetoothClientService.BT_CLIENT_DO_CAPTURE -> {
-                        Util.log("[BT Client] Capturing final photo")
+                        log(TAG, "[MessageReceiver][btMode: $currentBtMode] BT_CLIENT_DO_CAPTURE -> Capture photo right now")
                         timeAtStartCapturingPhoto = System.currentTimeMillis()
                         strategy!!.capturePhoto()
                     }
@@ -106,10 +109,11 @@ object TimelapseController {
             delayToNextCapture = 0
 
         timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-        Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+        log(TAG, "scheduleServerToCaptureNextPhoto() -> onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
         try {
             Thread.sleep(delayToNextCapture)
         } catch(e: InterruptedException) {
+            log(TAG, "scheduleServerToCaptureNextPhoto() -> Thread.sleep() InterruptedException")
             e.printStackTrace()
             this@TimelapseController.stopTimelapse()
             this@TimelapseController.listenerOutside!!.onFail(e.message)
@@ -128,7 +132,7 @@ object TimelapseController {
             LocalBroadcastManager.getInstance(context).registerReceiver(mMessageReceiver, IntentFilter(MainActivity.BROADCAST_FILTER))
         }
         currentBtMode = mode
-        Util.log("TimelapseController::startTimelapse with mode: $mode")
+        log(TAG, "startTimelapse() with btMode: $mode")
 
         this.context = Pair(context, null)
 
@@ -139,6 +143,7 @@ object TimelapseController {
         capturedPhotos = 0
 
         this.listenerOutside = onTimelapseProgressListener
+        stopPreview()
 
         when(mode) {
             BluetoothMode.DISABLED -> strategy!!.startTimelapse(btDisabled_onTimelapseStateChangeListener, context)
@@ -156,10 +161,9 @@ object TimelapseController {
         }
 
         override fun onCapture(bytes: ByteArray?) {
-            Util.log("TimelapseController::onCapture($capturedPhotos)")
-
             capturedPhotos++
 
+            log(TAG, "btClient_onTimelapseStateChangeListener::onCapture capturedPhotos=$capturedPhotos")
 //            if(capturedPhotos == settings!!.photosMax) {
 //                this@TimelapseController.stopTimelapse()
 //                this@TimelapseController.listenerOutside!!.onComplete()
@@ -174,7 +178,7 @@ object TimelapseController {
 //                delayToNextCapture = 0
 //
 //            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-//            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+//            log(TAG, "onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
 //            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
 //
 //            timeAtStartCapturingPhoto = System.currentTimeMillis()
@@ -198,10 +202,10 @@ object TimelapseController {
         }
 
         override fun onCapture(bytes: ByteArray?) {
-            Util.log("TimelapseController::onCapture($capturedPhotos)")
             capturedPhotos++
 
-//
+            log(TAG, "btServer_onTimelapseStateChangeListener::onCapture capturedPhotos=$capturedPhotos")
+
 //            if(capturedPhotos == settings!!.photosMax) {
 //                this@TimelapseController.stopTimelapse()
 //                this@TimelapseController.listenerOutside!!.onComplete()
@@ -220,7 +224,7 @@ object TimelapseController {
 //                delayToNextCapture = 0
 //
 //            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-//            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+//            log(TAG, "onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
 //            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
 //
 //            timeAtStartCapturingPhoto = System.currentTimeMillis()
@@ -241,8 +245,9 @@ object TimelapseController {
         }
 
         override fun onCapture(bytes: ByteArray?) {
-            Util.log("TimelapseController::onCapture($capturedPhotos)")
             capturedPhotos++
+
+            log(TAG, "btDisabled_onTimelapseStateChangeListener::onCapture capturedPhotos=$capturedPhotos")
 
             if(capturedPhotos == settings!!.photosMax) {
                 this@TimelapseController.stopTimelapse()
@@ -257,8 +262,16 @@ object TimelapseController {
                 delayToNextCapture = 0
 
             timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
-            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+            log(TAG, "btDisabled_onTimelapseStateChangeListener -> onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+
+            try {
+                Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+            } catch(e: InterruptedException) {
+                log(TAG, "scheduleServerToCaptureNextPhoto() -> Thread.sleep() InterruptedException")
+                e.printStackTrace()
+                this@TimelapseController.stopTimelapse()
+                this@TimelapseController.listenerOutside!!.onFail(e.message)
+            }
 
             timeAtStartCapturingPhoto = System.currentTimeMillis()
             strategy!!.capturePhoto()

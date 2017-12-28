@@ -7,7 +7,9 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.IBinder
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
 import pl.kflorczyk.timelapsemaker.*
+import pl.kflorczyk.timelapsemaker.Util.log
 import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothClientService
 import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
 
@@ -16,6 +18,7 @@ import pl.kflorczyk.timelapsemaker.bluetooth.BluetoothServerService
  * Created by Kamil on 2017-12-09.
  */
 class TimelapseService : Service() {
+    private val TAG = "TimelapseService"
 
     private var worker: WorkerThread? = null
     private var storageManager: StorageManager? = null
@@ -40,7 +43,7 @@ class TimelapseService : Service() {
         if(!storageManager!!.createTimelapseDirectory()) {
             val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_FAILED)
             LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
-            Util.log("[TimelapseService] Problem with creating directory")
+            log(TAG, "onStartCommand() Problem with creating directory")
             this@TimelapseService.stopSelf()
             return START_STICKY
         }
@@ -58,7 +61,7 @@ class TimelapseService : Service() {
                     if(bytes != null) {
                         storageManager!!.savePhoto(bytes, TimelapseController.getCapturedPhotos())
                     } else {
-                        Util.log("TimelapseService got onCapture() msg, but WITHOUT bytes of image") // todo: do sth about this
+                        log(TAG, "onStartCommand() -> Runnable -> onCapture() -> TimelapseService got onCapture() msg, but WITHOUT bytes of image") // todo: do sth about this
                     }
                 }
 
@@ -72,7 +75,7 @@ class TimelapseService : Service() {
                     val i = getSendingMessageIntent(MainActivity.BROADCAST_MSG_COMPLETE)
                     LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
                     this@TimelapseService.stopSelf()
-                    Util.log("TimelapseService::onComplete -> should correctly stop all things")
+                    log(TAG, "onStartCommand() -> Runnable -> onComplete() -> should correctly stop all things")
                 }
             }
 
@@ -90,7 +93,7 @@ class TimelapseService : Service() {
                 LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(i)
 
                 this@TimelapseService.stopSelf()
-                Util.log("[TimelapseService] TimelapseController.startTimelapse caught exception ${e.message}");
+                log(TAG, "onStartCommand() -> Runnable -> TimelapseController.startTimelapse() RUNTIME EXCEPTION: ${e.message}");
             }
         }
 

@@ -26,10 +26,14 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.Log
+import pl.kflorczyk.timelapsemaker.Util.log
 import pl.kflorczyk.timelapsemaker.http_server.HttpService
 
 class MainActivity : AppCompatActivity() {
     companion object {
+        val TAG = "MainActivity"
+
         val BROADCAST_FILTER = "pl.kflorczyk.timelapsemaker.timelapse.TimelapseService"
         var BROADCAST_MSG: String = "action"
         val BROADCAST_MSG_CAPTURED_PHOTO: String = "capturedPhoto"
@@ -97,13 +101,14 @@ class MainActivity : AppCompatActivity() {
         } else {
             functionAfterPermissionsDone()
         }
+        log(TAG, "onCreate")
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
         stopCountdownNextPhotoThread()
-        Util.log("MainActivity::onDestroy")
+        log(TAG, "onDestroy")
     }
 
     fun btnStartTimelapseClick(view: View) {
@@ -174,7 +179,7 @@ class MainActivity : AppCompatActivity() {
             stopService(Intent(this, HttpService::class.java))
         }
 
-        Util.log("MainActivity:: ON STOP")
+        log(TAG,"onStop")
     }
 
     override fun onResume() {
@@ -189,6 +194,7 @@ class MainActivity : AppCompatActivity() {
             btnStartTimelapse.setImageResource(R.drawable.record)
             startPreview()
         }
+        log(TAG, "onResume")
     }
 
     override fun onPause() {
@@ -199,6 +205,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         stopCountdownNextPhotoThread()
+        log(TAG, "onPause")
     }
 
     private fun startPreview() {
@@ -217,7 +224,7 @@ class MainActivity : AppCompatActivity() {
             override fun surfaceCreated(surfaceHolder: SurfaceHolder?) {
                 if(surfaceHolder == null) {
                     Toast.makeText(this@MainActivity, "Problem with creating the surface for camera preview", Toast.LENGTH_LONG).show()
-                    Util.log("MainActivity>startPreview>SurfaceHolder.Callback>surfaceCreated NULL")
+                    log(TAG, "startPreview() > surfaceCamera.holder.SurfaceHolder.Callback > surfaceCreated(surfaceHolder IS null)")
                     return
                 }
 
@@ -229,7 +236,7 @@ class MainActivity : AppCompatActivity() {
                         TimelapseController.startPreviewing(app.timelapseSettings!!, surfaceHolder, this@MainActivity)
                     } catch(e: CameraNotAvailableException) {
                         Toast.makeText(this@MainActivity, "Camera is currently not available. Ensure that camera is free and open the app again", Toast.LENGTH_LONG).show()
-                        Util.log("camera not available exception")
+                        log(TAG, "startPreview() > surfaceCamera.holder.SurfaceHolder.Callback > surfaceCreated() > startPreview causes CameraNotAvailableException")
                     }
                 }
             }
@@ -277,12 +284,12 @@ class MainActivity : AppCompatActivity() {
 
             when(msg) {
                 BROADCAST_MSG_CAPTURED_PHOTO -> {
-                    Util.log("MainAcitivity got BroadcastMessage $intent")
+                    log(TAG, "[MessageReceiver] MSG_CAPTURED_PHOTO")
                     val byteArrayExtra = intent?.getByteArrayExtra(BROADCAST_MSG_CAPTURED_PHOTO_BYTES)
                     updateUIStatistics()
 
-                    val compressImage = Util.compressImage(byteArrayExtra!!)
-                    Util.log("Size of photo: ${byteArrayExtra?.size}, and after compressed: ${compressImage.size}")
+//                    val compressImage = Util.compressImage(byteArrayExtra!!)
+//                    Util.log("Size of photo: ${byteArrayExtra?.size}, and after compressed: ${compressImage.size}")
 
                     if(byteArrayExtra != null) {
                         if(surfaceContainer.childCount > 0) {
@@ -311,11 +318,11 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
                 BROADCAST_MSG_FAILED -> {
-                    Util.log("Broadcast received msg failed")
+                    log(TAG, "[MessageReceiver] BROADCAST_MSG_FAILED")
                     onTimelapseCompleteOrFail()
                 }
                 BROADCAST_MSG_COMPLETE -> {
-                    Util.log("Broadcast received msg complete")
+                    log(TAG, "[MessageReceiver] BROADCAST_MSG_COMPLETE")
                     onTimelapseCompleteOrFail()
                 }
                 BROADCAST_MSG_REMOTE_EDIT_SETTINGS -> {

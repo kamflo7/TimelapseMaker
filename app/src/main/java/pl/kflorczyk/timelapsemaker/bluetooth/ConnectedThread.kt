@@ -2,7 +2,11 @@ package pl.kflorczyk.timelapsemaker.bluetooth
 
 import android.bluetooth.BluetoothSocket
 import android.os.Handler
+import android.util.Log
+import android.widget.Toast
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.Util.log
+import pl.kflorczyk.timelapsemaker.bluetooth.messages.Messages
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -12,6 +16,8 @@ import java.nio.ByteBuffer
  * Created by Kamil on 2017-12-24.
  */
 class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("ConnectedThreadBluetooth") {
+    private val TAG = "ConnectedThread"
+
     private val socket: BluetoothSocket = socket
     private var inputStream: InputStream
     private var outputStream: OutputStream
@@ -31,6 +37,7 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
             tmpIn = socket.inputStream
             tmpOut = socket.outputStream
         } catch(e: IOException) {
+            log(TAG, "init() -> InputStream or OutputStream initialization failed")
             e.printStackTrace()
         }
 
@@ -41,7 +48,7 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
     override fun run() {
         while(true) {
             try {
-                Util.log("Start reading single message")
+                log(TAG, "run() -> while() -> Start reading single message")
 
                 var read = 0
                 var headerMsg = ByteArray(8)
@@ -54,7 +61,7 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
                 do {
                     val r = inputStream.read()
                     if(r == -1) {
-                        Util.log("ConnectedThread->InputStream::read -1")
+                        log(TAG, "run() -> while() -> inputStream.read() returned -1 -> END OF STREAM")
                         cancel()
                         return
                     }
@@ -75,11 +82,14 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
                         msgID = allocate.int
                         dataLength = allocate.int
                         data = ByteArray(dataLength)
-                        Util.log("At this step I know that msgID is $msgID and data length is $dataLength")
+
+
+                        var msgDef = Messages.MessageType.values().find { v -> v.ordinal == msgID }
+                        log(TAG, "run() -> while() -> (read == 8) -> At this step I know that msgID is $msgID ($msgDef) and data length is $dataLength")
                     }
 
                 } while(b != (-2).toByte())
-                Util.log("End reading single message")
+                log(TAG, "run() -> while() -> End reading single message")
 
                 val responseMsg = ResponseMessage(this.socket, data!!)
 
@@ -93,11 +103,13 @@ class ConnectedThread(socket: BluetoothSocket, handler: Handler?) : Thread("Conn
     }
 
     fun write(bytes: ByteArray) {
-        Util.log("[ConnectedThread] Probuje wyslac kilka bajtow")
+        log(TAG, "write(ByteArray) // ByteArray.size = ${bytes.size}")
         try {
             outputStream.write(bytes)
         } catch(e: IOException) {
             e.printStackTrace()
+            log(TAG,"write(ByteArray) -> IOException")
+            handler!!.obtainMessage(Messages.MessageType.DEBUG.ordinal, "ConnectedThread::write EXCEPTION").sendToTarget()
         }
     }
 

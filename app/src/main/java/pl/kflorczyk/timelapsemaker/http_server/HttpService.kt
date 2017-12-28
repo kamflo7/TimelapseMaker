@@ -3,13 +3,17 @@ package pl.kflorczyk.timelapsemaker.http_server
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
+import android.util.Log
 import pl.kflorczyk.timelapsemaker.Util
+import pl.kflorczyk.timelapsemaker.Util.log
 import java.io.IOException
 
 /**
  * Created by Kamil on 2017-12-16.
  */
 class HttpService : Service() {
+    private val TAG = "HttpService"
+
     companion object {
         val PORT: Int = 9090
     }
@@ -24,10 +28,10 @@ class HttpService : Service() {
         server = HttpServer(PORT, applicationContext)
         try {
             server!!.start()
+            log(TAG, "onStartCommand() -> HttpServer.start() succesfully")
         } catch(e: IOException) {
-
+            log(TAG, "onStartCommand() -> HttpServer.start() causes IOException")
         }
-        Util.log("HttpService started!")
 
         return START_STICKY
     }
@@ -35,7 +39,7 @@ class HttpService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         server?.stop()
-        Util.log("HttpService is going down!")
+        log(TAG, "onDestroy()")
 
     }
 

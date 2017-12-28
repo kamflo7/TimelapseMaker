@@ -9,9 +9,10 @@ class Messages {
         SERVER_DO_CAPTURE,
 
         CLIENT_TIMELAPSE_INITIALIZED,
-        CLIENT_CAPTURED
+        CLIENT_CAPTURED,
         //CLIENT_CAPTURE_PROGRESS,
         //CLIENT_MESSAGE_CAPTURE // optional extra MessageCaptureWithImage
+        DEBUG
     }
 
     companion object {
