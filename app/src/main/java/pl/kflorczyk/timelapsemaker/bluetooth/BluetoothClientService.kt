@@ -25,6 +25,7 @@ class BluetoothClientService: Service() {
     companion object {
         val BT_CLIENT_TIMELAPSE_INITIALIZED: String = "btClientTimelapseInitialized"
         val BT_CLIENT_DO_CAPTURE: String = "btClientDoCapture"
+        val BT_CLIENT_CAPTURED: String = "btClientCaptured"
     }
 
     private var connectedThread: ConnectedThread? = null
@@ -34,11 +35,8 @@ class BluetoothClientService: Service() {
             var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
 
             when(msg) {
-                //
-                BT_CLIENT_TIMELAPSE_INITIALIZED -> {
-                    val bytesMsg = Messages.build(Messages.MessageType.CLIENT_TIMELAPSE_INITIALIZED)
-                    connectedThread!!.write(bytesMsg)
-                }
+                BT_CLIENT_TIMELAPSE_INITIALIZED -> connectedThread!!.write(Messages.build(Messages.MessageType.CLIENT_TIMELAPSE_INITIALIZED))
+                BT_CLIENT_CAPTURED -> connectedThread!!.write(Messages.build(Messages.MessageType.CLIENT_CAPTURED))
             }
 
             Util.log("HttpServer got BroadcastMessage: $intent")

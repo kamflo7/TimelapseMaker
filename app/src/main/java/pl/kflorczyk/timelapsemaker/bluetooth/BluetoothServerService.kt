@@ -26,11 +26,13 @@ class BluetoothServerService : Service() {
         val BT_SERVER_TIMELAPSE_START: String = "btServerStartTimelapse"
         val BT_SERVER_CLIENTS_READY: String = "btServerClientsReady"
         val BT_SERVER_DO_CAPTURE: String = "btServerDoCapture"
+        val BT_SERVER_CAPTURE_PHOTO_COMPLETE: String = "btServerCapturePhotoComplete"
     }
 
     private var worker: WorkerThread? = null
     private var connectedThreads: ArrayList<ConnectedThread> = ArrayList()
     private var clientsReadyForCapture = 0
+    private var clientsCapturedPhoto = 0
 
     private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -45,11 +47,13 @@ class BluetoothServerService : Service() {
                         connectedThread.write(msgBytes)
                 }
                 BT_SERVER_DO_CAPTURE -> {
+                    clientsCapturedPhoto = 0
                     val msgBytes = Messages.build(Messages.MessageType.SERVER_DO_CAPTURE, null)
 
                     for(connectedThread in connectedThreads)
                         connectedThread.write(msgBytes)
                 }
+
             }
         }
     }
@@ -64,6 +68,12 @@ class BluetoothServerService : Service() {
                 Util.log("BluetoothServer CLIENT_TIMELAPSE_INITIALIZED $clientsReadyForCapture / ${connectedThreads.size}")
                 if(clientsReadyForCapture == connectedThreads.size) {
                     Util.broadcastMessage(applicationContext, BT_SERVER_CLIENTS_READY)
+                }
+            }
+            Messages.MessageType.CLIENT_CAPTURED.ordinal -> {
+                clientsCapturedPhoto++
+                if(clientsCapturedPhoto == connectedThreads.size) {
+                    Util.broadcastMessage(applicationContext, BT_SERVER_CAPTURE_PHOTO_COMPLETE)
                 }
             }
         }
@@ -121,7 +131,7 @@ class BluetoothServerService : Service() {
 
         connectedThreads.add(connectedThread)
 
-//        val msg = MessageCaptureProgress()
+//        val msg = MessageCaptureWithImage()
 //        msg.battery = 77.43f
 //        msg.image = byteArrayOf(1, 2, 30, 40, 127, 125)
 //

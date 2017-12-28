@@ -26,7 +26,6 @@ import pl.kflorczyk.timelapsemaker.camera.Resolution
 import pl.kflorczyk.timelapsemaker.dialog_settings.DialogSettings
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import pl.kflorczyk.timelapsemaker.bluetooth.messages.MessageCaptureProgress
 import pl.kflorczyk.timelapsemaker.http_server.HttpService
 
 class MainActivity : AppCompatActivity() {

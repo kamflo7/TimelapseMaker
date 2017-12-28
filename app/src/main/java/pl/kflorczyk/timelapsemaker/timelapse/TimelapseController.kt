@@ -53,6 +53,10 @@ object TimelapseController {
 
     var currentBtMode: BluetoothMode = BluetoothMode.DISABLED
 
+    // special flags for server use
+    private var isServerCapturingPhoto: Boolean = false
+    private var clientsDoneCapturing: Boolean = true
+
     private var mMessageReceiver: BroadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             var msg = intent?.getStringExtra(MainActivity.BROADCAST_MSG)
@@ -61,17 +65,24 @@ object TimelapseController {
 
             if(currentBtMode == BluetoothMode.SERVER) {
                 when(msg) {
-                // messages for servers
                     BluetoothServerService.BT_SERVER_CLIENTS_READY -> {
                         Util.log("BTSERVER ready, capture first photo")
                         timeAtStartCapturingPhoto = System.currentTimeMillis()
+                        isServerCapturingPhoto = true
+                        clientsDoneCapturing = false
                         strategy!!.capturePhoto()
                         Util.broadcastMessage(this@TimelapseController.context!!.first, BluetoothServerService.BT_SERVER_DO_CAPTURE)
+                    }
+                    BluetoothServerService.BT_SERVER_CAPTURE_PHOTO_COMPLETE -> {
+                        Util.log("BTSERVER: All clients captured single photo")
+                        clientsDoneCapturing = true
+                        if(!isServerCapturingPhoto) {
+                            scheduleServerToCaptureNextPhoto()
+                        }
                     }
                 }
             } else if(currentBtMode == BluetoothMode.CLIENT) {
                 when(msg) {
-                // messages for clients
                     BluetoothClientService.BT_CLIENT_DO_CAPTURE -> {
                         Util.log("[BT Client] Capturing final photo")
                         timeAtStartCapturingPhoto = System.currentTimeMillis()
@@ -80,6 +91,35 @@ object TimelapseController {
                 }
             }
         }
+    }
+
+    fun scheduleServerToCaptureNextPhoto() {
+        if(capturedPhotos == settings!!.photosMax) {
+            this@TimelapseController.stopTimelapse()
+            this@TimelapseController.listenerOutside!!.onComplete()
+            //todo: send BT signal to end
+            return
+        }
+
+        var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+        if(delayToNextCapture < 0)
+            delayToNextCapture = 0
+
+        timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+        Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+        try {
+            Thread.sleep(delayToNextCapture)
+        } catch(e: InterruptedException) {
+            e.printStackTrace()
+            this@TimelapseController.stopTimelapse()
+            this@TimelapseController.listenerOutside!!.onFail(e.message)
+            //todo: HANDLE BLUETOOTH
+        }
+        timeAtStartCapturingPhoto = System.currentTimeMillis()
+        isServerCapturingPhoto = true
+        clientsDoneCapturing = false
+        strategy!!.capturePhoto()
+        Util.broadcastMessage(this@TimelapseController.context!!.first, BluetoothServerService.BT_SERVER_DO_CAPTURE)
     }
 
     fun startTimelapse(onTimelapseProgressListener: OnTimelapseProgressListener, context: Context, mode: BluetoothMode = BluetoothMode.DISABLED) {
@@ -117,26 +157,28 @@ object TimelapseController {
 
         override fun onCapture(bytes: ByteArray?) {
             Util.log("TimelapseController::onCapture($capturedPhotos)")
+
             capturedPhotos++
 
-            if(capturedPhotos == settings!!.photosMax) {
-                this@TimelapseController.stopTimelapse()
-                this@TimelapseController.listenerOutside!!.onComplete()
-                return
-            }
-
+//            if(capturedPhotos == settings!!.photosMax) {
+//                this@TimelapseController.stopTimelapse()
+//                this@TimelapseController.listenerOutside!!.onComplete()
+//                return
+//            }
+//
             this@TimelapseController.listenerOutside!!.onCapture(bytes)
-
-            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
-            if(delayToNextCapture < 0)
-                delayToNextCapture = 0
-
-            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
-            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
-
-            timeAtStartCapturingPhoto = System.currentTimeMillis()
-            strategy!!.capturePhoto()
+            Util.broadcastMessage(this@TimelapseController.context!!.first, BluetoothClientService.BT_CLIENT_CAPTURED)
+//
+//            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+//            if(delayToNextCapture < 0)
+//                delayToNextCapture = 0
+//
+//            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+//            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+//            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+//
+//            timeAtStartCapturingPhoto = System.currentTimeMillis()
+//            strategy!!.capturePhoto()
         }
 
         override fun onFail(msg: String) {
@@ -159,24 +201,30 @@ object TimelapseController {
             Util.log("TimelapseController::onCapture($capturedPhotos)")
             capturedPhotos++
 
-            if(capturedPhotos == settings!!.photosMax) {
-                this@TimelapseController.stopTimelapse()
-                this@TimelapseController.listenerOutside!!.onComplete()
-                return
-            }
-
+//
+//            if(capturedPhotos == settings!!.photosMax) {
+//                this@TimelapseController.stopTimelapse()
+//                this@TimelapseController.listenerOutside!!.onComplete()
+//                return
+//            }
+//
             this@TimelapseController.listenerOutside!!.onCapture(bytes)
+            isServerCapturingPhoto = false
 
-            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
-            if(delayToNextCapture < 0)
-                delayToNextCapture = 0
-
-            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
-            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
-            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
-
-            timeAtStartCapturingPhoto = System.currentTimeMillis()
-            strategy!!.capturePhoto()
+            if(clientsDoneCapturing) {
+                scheduleServerToCaptureNextPhoto()
+            }
+//
+//            var delayToNextCapture = settings!!.frequencyCapturing - (System.currentTimeMillis() - timeAtStartCapturingPhoto)
+//            if(delayToNextCapture < 0)
+//                delayToNextCapture = 0
+//
+//            timeAtWillBeNextCapture = System.currentTimeMillis() + delayToNextCapture
+//            Util.log("onCapture, now we are waiting precisely ${delayToNextCapture}ms to next capture")
+//            Thread.sleep(delayToNextCapture) // todo: Handle interrupted exception and invoke onFail()
+//
+//            timeAtStartCapturingPhoto = System.currentTimeMillis()
+//            strategy!!.capturePhoto()
         }
 
         override fun onFail(msg: String) {
